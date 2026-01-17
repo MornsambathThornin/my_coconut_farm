@@ -1,5 +1,5 @@
 import { format } from 'date-fns'
-import { supabase } from '@/lib/supabaseClient'
+import { supabase } from '@/utils/supabase/client'
 
 export interface Harvest {
   harvest_date: string | Date

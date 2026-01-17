@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabaseClient'
+import { supabase } from '@/utils/supabase/client'
 import { useAuthUser } from '@/lib/useAuthUser'
 import {
   calculateYieldPerTree,
@@ -125,9 +125,12 @@ export default function DashboardPage() {
           return
         }
 
-        const zoneList = zonesData || []
+        type ZoneTreeCount = {
+          tree_count: number | null
+        }
+        const zoneList: ZoneTreeCount[] = zonesData || []
         const treeTotal = zoneList.reduce(
-          (sum, zone) => sum + Number(zone.tree_count || 0),
+          (sum: number, zone) => sum + Number(zone.tree_count || 0),
           0
         )
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { supabase } from '@/lib/supabaseClient'
+import { supabase } from '@/utils/supabase/client'
 import ProductionChart from '@/components/charts/ProductionChart'
 import ZoneComparisonChart from '@/components/charts/ZoneComparisonChart'
 import DateRangeFilter from '@/components/forms/DateRangeFilter'

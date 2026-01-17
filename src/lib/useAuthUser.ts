@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabaseClient'
+import { supabase } from '@/utils/supabase/client'
+import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
 
 export function useAuthUser() {
   const [user, setUser] = useState<{
@@ -39,7 +40,8 @@ export function useAuthUser() {
     }
 
     const { data: authListener } =
-      supabase.auth.onAuthStateChange((_event, session) => {
+      supabase.auth.onAuthStateChange(
+        (_event: AuthChangeEvent, session: Session | null) => {
         if (isMounted) {
           setUser(session?.user ?? null)
         }

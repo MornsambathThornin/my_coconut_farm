@@ -1,24 +1,16 @@
-'use client'
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
+import { createClient } from '@/utils/supabase/server'
 
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabaseClient'
+export default async function Page() {
+  const cookieStore = await cookies()
+  const supabase = createClient(cookieStore)
 
-export default function Home() {
-  const router = useRouter()
+  const { data } = await supabase.auth.getSession()
 
-  useEffect(() => {
-    const routeUser = async () => {
-      const { data } = await supabase.auth.getSession()
-      if (data.session) {
-        router.replace('/dashboard')
-      } else {
-        router.replace('/login')
-      }
-    }
+  if (data.session) {
+    redirect('/dashboard')
+  }
 
-    routeUser()
-  }, [router])
-
-  return <div className="p-4">Loading...</div>
+  redirect('/login')
 }
