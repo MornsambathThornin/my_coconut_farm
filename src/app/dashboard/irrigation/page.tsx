@@ -1,8 +1,10 @@
+import IrrigationForm from '@/components/forms/IrrigationForm'
+
 export default function IrrigationPage() {
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-4">Irrigation</h1>
-      <p>Irrigation logs go here.</p>
+    <div className="max-w-xl bg-white p-4 rounded shadow">
+      <h1 className="text-xl font-bold mb-4">Add Irrigation Log</h1>
+      <IrrigationForm />
     </div>
   )
 }
