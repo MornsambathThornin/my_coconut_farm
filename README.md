@@ -1,36 +1,93 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Coconut Farm Dashboard
+
+A Next.js + Supabase dashboard for managing farms, zones, harvests, irrigation logs, and plantation batches with analytics, maps, and reporting.
+
+## Features
+
+- Farm profile create + edit with boundary drawing on a map
+- Dashboard overview metrics and farm map with all zone boundaries + hover details
+- Zone creation + edit with map drawing, auto area (ha), and boundary validation
+- Zone boundaries constrained to farm boundary; overlap with existing zones blocked
+- Zone detail with production analytics, harvest history, irrigation logs, and batches
+- Confirm dialogs, toasts, and error handling throughout
+- Supabase auth + row-level security (RLS) ready
+
+## Tech Stack
+
+- Next.js 16 (App Router)
+- React 19
+- Tailwind CSS 4
+- Supabase (Auth + Postgres)
+- Recharts for charts
+- Google Maps JS API (Drawing + Geometry libraries)
 
 ## Getting Started
 
-First, run the development server:
+Install dependencies:
+
+```bash
+npm install
+```
+
+Set environment variables in `.env.local`:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_api_key
+```
+
+Run the dev server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Key Routes
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `/dashboard` — Farm overview + metrics + farm map
+- `/dashboard/farm/edit` — Edit farm details + farm boundary
+- `/dashboard/zones` — Zones list
+- `/dashboard/zones/create` — Create zone with map drawing
+- `/dashboard/zones/[id]` — Zone detail, edit, delete
 
-## Learn More
+## Data Model Notes
 
-To learn more about Next.js, take a look at the following resources:
+- Zones store polygon boundaries in `zones.boundary` (jsonb) as `[lng, lat]` pairs.
+- Farms store the main boundary in `farms.boundary` (jsonb).
+- Zone area is calculated from the drawn polygon and stored in `zones.area_ha`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+If you don’t have `farms.boundary` yet:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```sql
+alter table public.farms
+add column if not exists boundary jsonb;
+```
 
-## Deploy on Vercel
+## Scripts
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm run dev     # start dev server
+npm run build   # build for production
+npm run start   # start production server
+npm run lint    # lint
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Supabase Notes
+
+- Client and server helpers live in `src/utils/supabase`.
+- Example RLS policies are in `src/lib/rls-policies.sql` (uncomment and apply in Supabase).
+
+## Project Structure
+
+- `src/app` — Next.js routes (dashboard, auth)
+- `src/components` — UI + forms
+- `src/components/maps` — map components
+- `src/lib` — helpers, policies
+- `src/utils/supabase` — Supabase client/server helpers
+
+## Deployment
+
+Deploy with Vercel or any Node hosting. Ensure the Supabase env vars are set in your deployment environment.

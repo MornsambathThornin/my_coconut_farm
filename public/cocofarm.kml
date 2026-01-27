@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
+  <Document id="1COF_b6LfPMVpdtQigSGYmKe7dm0NdM0F">
+    <name>Coconut Land</name>
+    <gx:CascadingStyle kml:id="__managed_style_5D5BE5B7DF3D2490BEEC">
+      <Style>
+        <IconStyle>
+          <scale>1.2</scale>
+          <Icon>
+            <href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2000&amp;scale=4</href>
+          </Icon>
+          <hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+        </IconStyle>
+        <LabelStyle>
+        </LabelStyle>
+        <LineStyle>
+          <color>ff2dc0fb</color>
+          <width>3</width>
+        </LineStyle>
+        <PolyStyle>
+          <color>40ffffff</color>
+        </PolyStyle>
+        <BalloonStyle>
+        </BalloonStyle>
+      </Style>
+    </gx:CascadingStyle>
+    <gx:CascadingStyle kml:id="__managed_style_48417AD6283D2490BEEC">
+      <Style>
+        <IconStyle>
+          <Icon>
+            <href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2000&amp;scale=4</href>
+          </Icon>
+          <hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+        </IconStyle>
+        <LabelStyle>
+        </LabelStyle>
+        <LineStyle>
+          <color>ff2dc0fb</color>
+          <width>2</width>
+        </LineStyle>
+        <PolyStyle>
+          <color>40ffffff</color>
+        </PolyStyle>
+        <BalloonStyle>
+        </BalloonStyle>
+      </Style>
+    </gx:CascadingStyle>
+    <StyleMap id="__managed_style_36C69762363D2490BEEC">
+      <Pair>
+        <key>normal</key>
+        <styleUrl>#__managed_style_48417AD6283D2490BEEC</styleUrl>
+      </Pair>
+      <Pair>
+        <key>highlight</key>
+        <styleUrl>#__managed_style_5D5BE5B7DF3D2490BEEC</styleUrl>
+      </Pair>
+    </StyleMap>
+    <Placemark id="05CE9DF3AA3CD26AE7E0">
+      <name>Main Coconut Land</name>
+      <LookAt>
+        <longitude>106.6336586041922</longitude>
+        <latitude>13.58262987711058</latitude>
+        <altitude>114.3804000562945</altitude>
+        <heading>351.2233064597912</heading>
+        <tilt>0</tilt>
+        <gx:fovy>35</gx:fovy>
+        <range>974.7583239096277</range>
+        <altitudeMode>absolute</altitudeMode>
+      </LookAt>
+      <styleUrl>#__managed_style_36C69762363D2490BEEC</styleUrl>
+      <Polygon>
+        <outerBoundaryIs>
+          <LinearRing>
+            <coordinates>
+              106.6325799915659,13.58353138433603,0 106.6327018153401,13.58337089473058,0 106.6327932364106,13.58309902029023,0 106.6327861139527,13.58301141352422,0 106.6327734618177,13.58292477111034,0 106.6327886203014,13.58289219066248,0 106.6329147321349,13.58280934736715,0 106.6329834337269,13.58267882562939,0 106.6331064132101,13.58252077328904,0 106.6334719198199,13.58228122705926,0 106.6357192059692,13.5825506168128,0 106.6356220315124,13.58390183814799,0 106.632594197485,13.58353376585361,0 106.6325799915659,13.58353138433603,0 
+            </coordinates>
+          </LinearRing>
+        </outerBoundaryIs>
+      </Polygon>
+    </Placemark>
+  </Document>
+</kml>

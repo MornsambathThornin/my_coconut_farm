@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabase/client'
+import ConfirmModal from '@/components/ui/ConfirmModal'
+import ErrorModal from '@/components/ui/ErrorModal'
+import Toast from '@/components/ui/Toast'
 
 type Zone = {
   id: string
@@ -14,6 +17,7 @@ type Props = {
 }
 
 export default function IrrigationForm({ zoneId, onSuccess }: Props) {
+  const today = new Date().toISOString().split('T')[0]
   const [zones, setZones] = useState<Zone[]>([])
   const [form, setForm] = useState({
     zone_id: zoneId || '',
@@ -24,7 +28,12 @@ export default function IrrigationForm({ zoneId, onSuccess }: Props) {
     notes: '',
   })
   const [loading, setLoading] = useState(false)
-  const [successMessage, setSuccessMessage] = useState('')
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [toast, setToast] = useState({ open: false, message: '' })
+  const [errorModal, setErrorModal] = useState({
+    open: false,
+    message: '',
+  })
 
   useEffect(() => {
     if (zoneId) return
@@ -45,15 +54,26 @@ export default function IrrigationForm({ zoneId, onSuccess }: Props) {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     setForm({ ...form, [e.target.name]: e.target.value })
-    if (successMessage) {
-      setSuccessMessage('')
-    }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (loading) return
+    setConfirmOpen(true)
+  }
+
+  const handleConfirmSubmit = async () => {
+    setConfirmOpen(false)
     setLoading(true)
-    setSuccessMessage('')
+
+    if (form.irrigation_date && form.irrigation_date > today) {
+      setLoading(false)
+      setErrorModal({
+        open: true,
+        message: 'Irrigation date cannot be in the future.',
+      })
+      return
+    }
 
     // const { data: userData, error: userError } =
     //   await supabase.auth.getUser()
@@ -81,8 +101,11 @@ export default function IrrigationForm({ zoneId, onSuccess }: Props) {
     const { data: { user }, error: userError } = await supabase.auth.getUser()
 
     if (userError || !user) {
-     alert("User not authenticated. Please log in.")
      setLoading(false)
+     setErrorModal({
+       open: true,
+       message: 'Please log in to add an irrigation log.',
+     })
      return
    }
 
@@ -112,10 +135,13 @@ export default function IrrigationForm({ zoneId, onSuccess }: Props) {
         water_source: '',
         notes: '',
       })
-      setSuccessMessage('Irrigation log saved.')
+      setToast({ open: true, message: 'Irrigation log saved.' })
       onSuccess?.()
     } else {
-      alert(error.message)
+      setErrorModal({
+        open: true,
+        message: error.message,
+      })
     }
   }
 
@@ -127,7 +153,7 @@ export default function IrrigationForm({ zoneId, onSuccess }: Props) {
           value={form.zone_id}
           onChange={handleChange}
           required
-          className="w-full border p-2 rounded"
+          className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
         >
           <option value="">Select Zone</option>
           {zones.map((z) => (
@@ -144,7 +170,8 @@ export default function IrrigationForm({ zoneId, onSuccess }: Props) {
         value={form.irrigation_date}
         onChange={handleChange}
         required
-        className="w-full border p-2 rounded"
+        max={today}
+        className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
       />
 
       <input
@@ -153,7 +180,7 @@ export default function IrrigationForm({ zoneId, onSuccess }: Props) {
         placeholder="Method (Drip / Hose / Sprinkler)"
         value={form.method}
         onChange={handleChange}
-        className="w-full border p-2 rounded"
+        className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
       />
 
       <input
@@ -162,7 +189,7 @@ export default function IrrigationForm({ zoneId, onSuccess }: Props) {
         placeholder="Duration (minutes)"
         value={form.duration_minutes}
         onChange={handleChange}
-        className="w-full border p-2 rounded"
+        className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
       />
 
       <input
@@ -171,7 +198,7 @@ export default function IrrigationForm({ zoneId, onSuccess }: Props) {
         placeholder="Water source (Well / Pond / Rain)"
         value={form.water_source}
         onChange={handleChange}
-        className="w-full border p-2 rounded"
+        className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
       />
 
       <textarea
@@ -179,21 +206,37 @@ export default function IrrigationForm({ zoneId, onSuccess }: Props) {
         placeholder="Notes"
         value={form.notes}
         onChange={handleChange}
-        className="w-full border p-2 rounded"
+        className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
       />
 
       <button
         type="submit"
         disabled={loading}
-        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+        className="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700"
       >
         {loading ? 'Saving...' : 'Add Irrigation'}
       </button>
-      {successMessage ? (
-        <p className="text-sm text-blue-700">
-          {successMessage}
-        </p>
-      ) : null}
+      <ConfirmModal
+        open={confirmOpen}
+        title="Add irrigation log?"
+        message="This will save the irrigation entry to the selected zone."
+        confirmLabel="Save"
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={handleConfirmSubmit}
+      />
+      <ErrorModal
+        open={errorModal.open}
+        title="Unable to save"
+        message={errorModal.message}
+        onClose={() =>
+          setErrorModal((prev) => ({ ...prev, open: false }))
+        }
+      />
+      <Toast
+        open={toast.open}
+        message={toast.message}
+        onClose={() => setToast((prev) => ({ ...prev, open: false }))}
+      />
     </form>
   )
 }

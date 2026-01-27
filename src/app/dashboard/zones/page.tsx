@@ -6,6 +6,7 @@ import { ensureProfileAndFarm } from '@/lib/helpers'
 import { useAuthUser } from '@/lib/useAuthUser'
 import Link from 'next/link'
 import ZoneCard from '@/components/zones/ZoneCard'
+import ErrorModal from '@/components/ui/ErrorModal'
 import type { Zone } from '@/types/db'
 
 type Farm = {
@@ -17,15 +18,9 @@ export default function ZonesPage() {
   const [zones, setZones] = useState<Zone[]>([])
   const [farm, setFarm] = useState<Farm | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [creating, setCreating] = useState(false)
-  const [success, setSuccess] = useState('')
-  const [form, setForm] = useState({
-    name: '',
-    area_ha: '',
-    tree_count: '',
-    avg_tree_age_years: '',
-    variety: '',
+  const [errorModal, setErrorModal] = useState({
+    open: false,
+    message: '',
   })
   const { user, loading: authLoading } = useAuthUser()
 
@@ -38,7 +33,10 @@ export default function ZonesPage() {
       .order('name')
 
     if (zonesError) {
-      setError(zonesError.message)
+      setErrorModal({
+        open: true,
+        message: zonesError.message,
+      })
     } else {
       setZones(data || [])
     }
@@ -68,203 +66,62 @@ export default function ZonesPage() {
     }
   }, [authLoading, user])
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    setForm({ ...form, [e.target.name]: e.target.value })
-    if (success) {
-      setSuccess('')
-    }
-  }
+  if (loading || authLoading) return (
+    <div className="flex items-center justify-center min-h-[400px]">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+    </div>
+  )
 
-  const handleCreateZone = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!user || !farm) return
-
-    setCreating(true)
-    setError(null)
-
-    const { error: zoneError } = await supabase
-      .from('zones')
-      .insert({
-        user_id: user.id,
-        farm_id: farm.id,
-        name: form.name,
-        area_ha: form.area_ha ? Number(form.area_ha) : null,
-        tree_count: form.tree_count ? Number(form.tree_count) : null,
-        avg_tree_age_years: form.avg_tree_age_years
-          ? Number(form.avg_tree_age_years)
-          : null,
-        variety: form.variety || null,
-      })
-
-    if (zoneError) {
-      setError(zoneError.message)
-    } else {
-      setForm({
-        name: '',
-        area_ha: '',
-        tree_count: '',
-        avg_tree_age_years: '',
-        variety: '',
-      })
-      setSuccess('Zone created.')
-      await fetchZones(farm.id, user.id)
-    }
-
-    setCreating(false)
-  }
-
-  if (loading || authLoading) return <p>Loading zones...</p>
-
-  if (error) return <p className="text-red-600">{error}</p>
-
-  if (!farm) {
-    return (
-      <div className="space-y-2">
-        <p className="text-gray-600">
-          You don’t have a farm yet. Create one to start adding zones.
-        </p>
-        <Link
-          href="/dashboard"
-          className="text-sm text-green-700 hover:underline"
-        >
-          Go to dashboard to create a farm →
-        </Link>
-      </div>
-    )
-  }
-
-  if (!zones.length) {
-    return (
-      <div className="space-y-6">
-        <p className="text-gray-600">
-          No zones yet. Add your first zone for {farm.name}.
-        </p>
-        <form
-          onSubmit={handleCreateZone}
-          className="bg-white p-4 rounded shadow space-y-3 max-w-xl"
-        >
-          <h2 className="text-lg font-semibold">Create Zone</h2>
-          <input
-            name="name"
-            value={form.name}
-            onChange={handleChange}
-            placeholder="Zone name"
-            className="w-full border p-2 rounded"
-            required
-          />
-          <input
-            name="area_ha"
-            value={form.area_ha}
-            onChange={handleChange}
-            placeholder="Area (ha)"
-            type="number"
-            className="w-full border p-2 rounded"
-          />
-          <input
-            name="tree_count"
-            value={form.tree_count}
-            onChange={handleChange}
-            placeholder="Tree count"
-            type="number"
-            className="w-full border p-2 rounded"
-          />
-          <input
-            name="avg_tree_age_years"
-            value={form.avg_tree_age_years}
-            onChange={handleChange}
-            placeholder="Avg tree age (years)"
-            type="number"
-            className="w-full border p-2 rounded"
-          />
-          <input
-            name="variety"
-            value={form.variety}
-            onChange={handleChange}
-            placeholder="Variety"
-            className="w-full border p-2 rounded"
-          />
-          {success ? (
-            <p className="text-sm text-green-700">{success}</p>
-          ) : null}
-          <button
-            type="submit"
-            disabled={creating}
-            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-          >
-            {creating ? 'Creating...' : 'Create Zone'}
-          </button>
-        </form>
-      </div>
-    )
-  }
+  if (!farm) return (
+    <div className="max-w-md mx-auto mt-20 text-center p-8 bg-white rounded-2xl border border-slate-200 shadow-sm">
+      <div className="text-4xl mb-4">🚜</div>
+      <h2 className="text-xl font-bold text-slate-900">No Farm Detected</h2>
+      <p className="text-slate-500 mt-2 mb-6">You need to set up your farm profile before you can define cultivation zones.</p>
+      <Link href="/dashboard" className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors">
+        Go to Dashboard →
+      </Link>
+    </div>
+  )
 
   return (
-    <div className="space-y-6">
-      <form
-        onSubmit={handleCreateZone}
-        className="bg-white p-4 rounded shadow space-y-3 max-w-xl"
-      >
-        <h2 className="text-lg font-semibold">Create Zone</h2>
-        <input
-          name="name"
-          value={form.name}
-          onChange={handleChange}
-          placeholder="Zone name"
-          className="w-full border p-2 rounded"
-          required
-        />
-        <div className="grid gap-3 md:grid-cols-2">
-          <input
-            name="area_ha"
-            value={form.area_ha}
-            onChange={handleChange}
-            placeholder="Area (ha)"
-            type="number"
-            className="w-full border p-2 rounded"
-          />
-          <input
-            name="tree_count"
-            value={form.tree_count}
-            onChange={handleChange}
-            placeholder="Tree count"
-            type="number"
-            className="w-full border p-2 rounded"
-          />
-          <input
-            name="avg_tree_age_years"
-            value={form.avg_tree_age_years}
-            onChange={handleChange}
-            placeholder="Avg tree age (years)"
-            type="number"
-            className="w-full border p-2 rounded"
-          />
-          <input
-            name="variety"
-            value={form.variety}
-            onChange={handleChange}
-            placeholder="Variety"
-            className="w-full border p-2 rounded"
-          />
+    <div className="max-w-6xl mx-auto space-y-8 p-4">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-6">
+        <div>
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Farm Zones</h1>
+          <p className="text-slate-500 mt-1">Manage and monitor specific areas of <span className="font-semibold text-slate-700">{farm.name}</span></p>
         </div>
-        {success ? (
-          <p className="text-sm text-green-700">{success}</p>
-        ) : null}
-        <button
-          type="submit"
-          disabled={creating}
-          className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+        
+        <Link
+          href="/dashboard/zones/create"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold transition-all shadow-sm bg-green-600 text-white hover:bg-green-700"
         >
-          {creating ? 'Creating...' : 'Create Zone'}
-        </button>
-      </form>
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {zones.map((z) => (
-          <ZoneCard key={z.id} zone={z} />
-        ))}
+          + Add New Zone
+        </Link>
       </div>
+
+      {/* Zones Display */}
+      {!zones.length ? (
+        <div className="text-center py-20 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
+          <p className="text-slate-500 italic">No zones mapped yet. Click &quot;Add New Zone&quot; to get started.</p>
+        </div>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {zones.map((z) => (
+            <div key={z.id} className="transition-transform hover:scale-[1.02] active:scale-[0.98]">
+               <ZoneCard zone={z} />
+            </div>
+          ))}
+        </div>
+      )}
+      <ErrorModal
+        open={errorModal.open}
+        title="Unable to save"
+        message={errorModal.message}
+        onClose={() =>
+          setErrorModal((prev) => ({ ...prev, open: false }))
+        }
+      />
     </div>
   )
 }

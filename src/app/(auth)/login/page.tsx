@@ -3,13 +3,21 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
+import ConfirmModal from '@/components/ui/ConfirmModal'
+import ErrorModal from '@/components/ui/ErrorModal'
+import Toast from '@/components/ui/Toast'
 
 export default function LoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [toast, setToast] = useState({ open: false, message: '' })
+  const [errorModal, setErrorModal] = useState({
+    open: false,
+    message: '',
+  })
 
   useEffect(() => {
     const checkSession = async () => {
@@ -22,10 +30,15 @@ export default function LoginPage() {
     checkSession()
   }, [router])
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()
+    if (loading) return
+    setConfirmOpen(true)
+  }
+
+  const handleConfirmLogin = async () => {
+    setConfirmOpen(false)
     setLoading(true)
-    setError(null)
 
     const { error } = await supabase.auth.signInWithPassword({
       email,
@@ -33,9 +46,12 @@ export default function LoginPage() {
     })
 
     if (error) {
-      setError(error.message)
+      setErrorModal({ open: true, message: error.message })
     } else {
-      router.replace('/dashboard')
+      setToast({ open: true, message: 'Signed in successfully.' })
+      setTimeout(() => {
+        router.replace('/dashboard')
+      }, 600)
     }
 
     setLoading(false)
@@ -67,10 +83,6 @@ export default function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        {error && (
-          <p className="text-red-600 text-sm mb-2">{error}</p>
-        )}
-
         <button
           type="submit"
           disabled={loading}
@@ -78,6 +90,27 @@ export default function LoginPage() {
         >
           {loading ? 'Signing in...' : 'Login'}
         </button>
+        <ConfirmModal
+          open={confirmOpen}
+          title="Sign in?"
+          message="Confirm you want to sign in with these credentials."
+          confirmLabel="Sign in"
+          onCancel={() => setConfirmOpen(false)}
+          onConfirm={handleConfirmLogin}
+        />
+        <ErrorModal
+          open={errorModal.open}
+          title="Sign in failed"
+          message={errorModal.message}
+          onClose={() =>
+            setErrorModal((prev) => ({ ...prev, open: false }))
+          }
+        />
+        <Toast
+          open={toast.open}
+          message={toast.message}
+          onClose={() => setToast((prev) => ({ ...prev, open: false }))}
+        />
       </form>
     </div>
   )
