@@ -104,7 +104,7 @@ export default function FarmCreateForm({ onSuccess }: Props) {
             value={form.name}
             onChange={handleChange}
             required
-            placeholder="e.g. North Coconut Grove"
+            placeholder="e.g. North Field"
             className="w-full rounded-lg border border-slate-300 p-2.5 text-slate-900 placeholder:text-slate-400 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
             aria-invalid={showFieldErrors && !!validation.name}
             aria-describedby={showFieldErrors && validation.name ? 'farm-name-error' : undefined}

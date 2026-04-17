@@ -1,4 +1,4 @@
--- Supabase RLS policies for Coconut Farm Dashboard
+-- Supabase RLS policies for the Farm Management Dashboard
 -- Uncomment and run in Supabase SQL editor when ready.
 
 -- Add user ownership columns (if missing).

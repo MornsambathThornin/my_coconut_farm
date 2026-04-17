@@ -387,7 +387,7 @@ function getReportFileName() {
   const year = now.getFullYear()
   const month = String(now.getMonth() + 1).padStart(2, '0')
   const day = String(now.getDate()).padStart(2, '0')
-  return `coconut-report-${year}-${month}-${day}.csv`
+  return `farm-report-${year}-${month}-${day}.csv`
 }
 
 function formatCsvValue(value: string | number | Date) {
