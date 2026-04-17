@@ -11,6 +11,7 @@ import Toast from "@/components/ui/Toast";
 import FarmCreateForm from "@/components/FarmCreateForm";
 import type { Harvest } from "@/lib/helpers";
 import { useFarmContext } from "@/context/FarmContext";
+import { useTranslations } from "@/lib/useTranslations";
 
 type Profile = {
   id: string;
@@ -21,6 +22,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuthUser();
   const { farms, activeFarm, setActiveFarmId } = useFarmContext();
+  const { t } = useTranslations();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [zoneBoundaries, setZoneBoundaries] = useState<
     {
@@ -43,8 +45,8 @@ export default function DashboardPage() {
   });
 
   const handleFarmCreated = useCallback(() => {
-    setToast({ open: true, message: "Farm profile created." });
-  }, []);
+    setToast({ open: true, message: t("dashboard.farmCreatedToast") });
+  }, [t]);
   useEffect(() => {
     if (!authLoading && !user) {
       router.replace("/login");
@@ -191,7 +193,7 @@ export default function DashboardPage() {
     return calculateYieldPerHectare(totalHarvest, totalArea);
   }, [activeFarm, totalHarvest, totalArea]);
 
-  if (loading || authLoading) return <p>Loading...</p>;
+  if (loading || authLoading) return <p>{t("common.loading")}</p>;
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 p-4">
@@ -199,12 +201,12 @@ export default function DashboardPage() {
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-            Farm Overview
+            {t("dashboard.title")}
           </h1>
           <p className="text-slate-500 mt-1">
             {profile?.full_name
-              ? `Welcome back, ${profile.full_name}`
-              : "Welcome back to your dashboard"}
+              ? t("dashboard.welcomeWithName").replace("{name}", profile.full_name)
+              : t("dashboard.welcomeNoName")}
           </p>
         </div>
         {activeFarm && (
@@ -220,7 +222,7 @@ export default function DashboardPage() {
       {(farms?.length ?? 0) > 1 && (
         <div className="flex flex-col gap-1">
           <label htmlFor="farm-select" className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            View farm
+            {t("dashboard.viewFarm")}
           </label>
           <select
             id="farm-select"
@@ -256,10 +258,10 @@ export default function DashboardPage() {
               </svg>
             </div>
             <h2 className="text-xl font-bold text-slate-900">
-              Establish Your Farm
+              {t("dashboard.establishFarm")}
             </h2>
             <p className="text-slate-500 mt-2">
-              Define your farm details and draw the boundary to unlock tracking.
+              {t("dashboard.establishFarmDesc")}
             </p>
           </div>
 
@@ -272,14 +274,14 @@ export default function DashboardPage() {
           {/* Metrics Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-            {
-                label: "Total Area",
+              {
+                label: t("dashboard.metrics.totalArea"),
                 value: `${activeFarm?.total_area_ha ?? "-"} ha`,
                 color: "blue",
               },
-              { label: "Active Zones", value: zonesCount, color: "emerald" },
-              { label: "Total Harvest", value: totalHarvest, color: "amber" },
-              { label: "Tree Count", value: totalTrees, color: "green" },
+              { label: t("dashboard.metrics.zones"), value: zonesCount, color: "emerald" },
+              { label: t("dashboard.metrics.totalHarvest"), value: totalHarvest, color: "amber" },
+              { label: t("dashboard.metrics.trees"), value: totalTrees, color: "green" },
             ].map((stat, i) => (
               <div
                 key={i}
@@ -300,7 +302,7 @@ export default function DashboardPage() {
             <div className="md:col-span-2 bg-gradient-to-br from-green-600 to-green-800 rounded-2xl p-8 text-white shadow-lg relative overflow-hidden">
               <div className="relative z-10">
                 <h3 className="text-lg font-medium opacity-90">
-                  Average Productivity
+                  {t("dashboard.avgProductivity")}
                 </h3>
                 <div className="mt-4 flex items-baseline gap-2">
                   <span className="text-5xl font-extrabold tracking-tight">
@@ -309,8 +311,7 @@ export default function DashboardPage() {
                   <span className="text-xl opacity-80">kg / ha</span>
                 </div>
                 <p className="mt-4 text-green-100 text-sm max-w-xs">
-                  This metric is calculated across all active zones and current
-                  harvest cycles.
+                  {t("dashboard.productivityDesc")}
                 </p>
               </div>
               {/* Decorative SVG Background */}
@@ -326,12 +327,12 @@ export default function DashboardPage() {
             {/* Details Sidebar */}
             <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
               <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4">
-                Farm Details
+                {t("dashboard.farm.details")}
               </h3>
               <div className="space-y-4">
                 <div>
                   <p className="text-xs text-slate-400 font-medium uppercase">
-                    Primary Owner
+                    {t("dashboard.primaryOwner")}
                   </p>
                   <p className="text-slate-700 font-semibold">
                     {profile?.full_name || user?.email}
@@ -340,10 +341,10 @@ export default function DashboardPage() {
                 <hr className="border-slate-100" />
                 <div>
                   <p className="text-xs text-slate-400 font-medium uppercase">
-                    Location
+                    {t("dashboard.location")}
                   </p>
                   <p className="text-slate-700">
-                    {activeFarm?.location || "Not specified"}
+                    {activeFarm?.location || t("dashboard.notSpecified")}
                   </p>
                 </div>
               </div>
@@ -352,7 +353,7 @@ export default function DashboardPage() {
 
           <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
             <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4">
-              Farm Map
+              {t("dashboard.chart.title")}
             </h3>
             <div className="h-[360px] w-full">
               {Array.isArray(activeFarm?.boundary) &&
@@ -363,7 +364,7 @@ export default function DashboardPage() {
                 />
               ) : (
                 <div className="flex h-full items-center justify-center text-sm text-slate-500">
-                  No farm boundary saved yet.
+                  {t("dashboard.noBoundary")}
                 </div>
               )}
             </div>
@@ -372,7 +373,7 @@ export default function DashboardPage() {
       )} 
       <ErrorModal
         open={errorModal.open}
-        title="Something went wrong"
+        title={t("common.somethingWentWrong")}
         message={errorModal.message}
         onClose={() =>
           setErrorModal((prev) => ({ ...prev, open: false }))

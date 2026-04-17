@@ -10,6 +10,7 @@ import ErrorModal from "@/components/ui/ErrorModal";
 import Toast from "@/components/ui/Toast";
 import FarmCreateForm from "@/components/FarmCreateForm";
 import { useFarmContext } from "@/context/FarmContext";
+import { useTranslations } from "@/lib/useTranslations";
 
 type Profile = {
   id: string;
@@ -43,6 +44,7 @@ export default function ProfilePage() {
   });
   const { user, loading: authLoading } = useAuthUser();
   const { activeFarm } = useFarmContext();
+  const { t } = useTranslations();
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -158,11 +160,11 @@ export default function ProfilePage() {
     e.preventDefault();
     if (saving) return;
     if (!profile?.full_name?.trim()) {
-      setErrorModal({ open: true, message: "Full name is required." });
+      setErrorModal({ open: true, message: t("profile.fullNameRequired") });
       return;
     }
     if (profile.full_name.trim().length > 100) {
-      setErrorModal({ open: true, message: "Full name is too long." });
+      setErrorModal({ open: true, message: t("profile.fullNameTooLong") });
       return;
     }
     setConfirmOpen(true);
@@ -182,7 +184,7 @@ export default function ProfilePage() {
     if (saveError) {
       setErrorModal({ open: true, message: saveError.message });
     } else {
-      setToast({ open: true, message: "Profile updated." });
+      setToast({ open: true, message: t("profile.profileUpdatedToast") });
     }
 
     setSaving(false);
@@ -191,7 +193,7 @@ export default function ProfilePage() {
   if (loading || authLoading) {
     return (
       <div className="p-10 text-center animate-pulse text-slate-500">
-        Loading profile...
+        {t("profile.loading")}
       </div>
     );
   }
@@ -202,10 +204,10 @@ export default function ProfilePage() {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-              Profile Settings
+              {t("profile.title")}
             </h1>
             <p className="text-sm text-slate-500 mt-2">
-              Keep your account details and farm overview up to date.
+              {t("profile.subtitle")}
             </p>
           </div>
         </div>
@@ -215,16 +217,16 @@ export default function ProfilePage() {
         <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
           <div>
             <h2 className="text-lg font-bold text-slate-900">
-              Account Details
+              {t("profile.accountDetails")}
             </h2>
             <p className="text-sm text-slate-500">
-              Update your personal information.
+              {t("profile.accountDetailsDesc")}
             </p>
           </div>
 
           <form onSubmit={handleSave} className="space-y-4">
             <label className="block text-sm">
-              <span className="text-slate-600">Email</span>
+              <span className="text-slate-600">{t("profile.email")}</span>
               <input
                 type="email"
                 value={email}
@@ -234,7 +236,7 @@ export default function ProfilePage() {
             </label>
 
             <label className="block text-sm">
-              <span className="text-slate-600">Full name</span>
+              <span className="text-slate-600">{t("profile.fullName")}</span>
               <input
                 type="text"
                 value={profile?.full_name || ""}
@@ -243,7 +245,7 @@ export default function ProfilePage() {
                     prev ? { ...prev, full_name: e.target.value } : prev,
                   )
                 }
-                placeholder="Enter your full name"
+                placeholder={t("profile.fullNamePlaceholder")}
                 className="mt-1 w-full rounded-xl border border-slate-200 p-3"
               />
             </label>
@@ -253,41 +255,41 @@ export default function ProfilePage() {
               disabled={saving}
               className="rounded-xl bg-green-600 px-5 py-2.5 text-white font-semibold hover:bg-green-700 transition-colors disabled:opacity-60"
             >
-              {saving ? "Saving..." : "Save changes"}
+              {saving ? t("profile.saving") : t("profile.saveChanges")}
             </button>
           </form>
         </div>
 
         <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
           <h3 className="text-sm font-bold uppercase tracking-widest text-slate-500">
-            Farm Overview
+            {t("profile.farmOverview")}
           </h3>
           {activeFarm ? (
             <div className="mt-4 space-y-3 text-sm text-slate-600">
               <div>
                 <p className="text-xs font-semibold text-slate-400">
-                  Farm Name
+                  {t("profile.farmName")}
                 </p>
                 <p className="font-medium text-slate-900">{activeFarm.name}</p>
               </div>
               <div>
-                <p className="text-xs font-semibold text-slate-400">Location</p>
+                <p className="text-xs font-semibold text-slate-400">{t("profile.location")}</p>
                 <p className="font-medium text-slate-900">
-                  {activeFarm.location || "Not set"}
+                  {activeFarm.location || t("profile.locationNotSet")}
                 </p>
               </div>
               <div>
                 <p className="text-xs font-semibold text-slate-400">
-                  Total Area
+                  {t("profile.totalArea")}
                 </p>
                 <p className="font-medium text-slate-900">
                   {activeFarm.total_area_ha ?? "-"} ha
                 </p>
               </div>
               <div>
-                <p className="text-xs font-semibold text-slate-400">Notes</p>
+                <p className="text-xs font-semibold text-slate-400">{t("profile.notes")}</p>
                 <p className="font-medium text-slate-900">
-                  {activeFarm.notes || "No notes"}
+                  {activeFarm.notes || t("profile.noNotes")}
                 </p>
               </div>
               <div className="pt-2">
@@ -295,18 +297,18 @@ export default function ProfilePage() {
                   href={`/dashboard/farm/${activeFarm.id}/edit`}
                   className="inline-flex items-center justify-center px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-widest bg-slate-900 text-white hover:bg-slate-800"
                 >
-                  Edit Farm
+                  {t("profile.editFarm")}
                 </Link>
               </div>
             </div>
           ) : (
             <div className="mt-4 space-y-6">
               <p className="text-sm text-slate-500">
-                No farm linked yet. Draw your farm boundary below to get started.
+                {t("profile.noFarm")}
               </p>
               <FarmCreateForm
                 onSuccess={() => {
-                  setToast({ open: true, message: "Farm profile saved." })
+                  setToast({ open: true, message: t("profile.farmSavedToast") })
                   router.refresh()
                 }}
               />
@@ -316,12 +318,12 @@ export default function ProfilePage() {
 
         <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
           <h3 className="text-sm font-bold uppercase tracking-widest text-slate-500">
-            Account Summary
+            {t("profile.accountSummary")}
           </h3>
           <div className="mt-4 space-y-3 text-sm text-slate-600">
             <div>
               <p className="text-xs font-semibold text-slate-400">
-                Member Since
+                {t("profile.memberSince")}
               </p>
               <p className="font-medium text-slate-900">
                 {formatDate(accountInfo.createdAt)}
@@ -329,7 +331,7 @@ export default function ProfilePage() {
             </div>
             <div>
               <p className="text-xs font-semibold text-slate-400">
-                Last Sign In
+                {t("profile.lastSignIn")}
               </p>
               <p className="font-medium text-slate-900">
                 {formatDate(accountInfo.lastSignInAt)}
@@ -340,24 +342,24 @@ export default function ProfilePage() {
 
         <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
           <h3 className="text-sm font-bold uppercase tracking-widest text-slate-500">
-            Activity Snapshot
+            {t("profile.activitySnapshot")}
           </h3>
           <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-slate-600">
             <div>
-              <p className="text-xs font-semibold text-slate-400">Zones</p>
+              <p className="text-xs font-semibold text-slate-400">{t("profile.zones")}</p>
               <p className="text-lg font-bold text-slate-900">{zonesCount}</p>
             </div>
             <div>
-              <p className="text-xs font-semibold text-slate-400">Trees</p>
+              <p className="text-xs font-semibold text-slate-400">{t("profile.trees")}</p>
               <p className="text-lg font-bold text-slate-900">{totalTrees}</p>
             </div>
             <div>
-              <p className="text-xs font-semibold text-slate-400">Harvests</p>
+              <p className="text-xs font-semibold text-slate-400">{t("profile.harvests")}</p>
               <p className="text-lg font-bold text-slate-900">{harvestCount}</p>
             </div>
             <div>
               <p className="text-xs font-semibold text-slate-400">
-                Last Harvest
+                {t("profile.lastHarvest")}
               </p>
               <p className="text-sm font-semibold text-slate-900">
                 {formatDate(lastHarvestDate)}
@@ -368,15 +370,15 @@ export default function ProfilePage() {
       </div>
       <ConfirmModal
         open={confirmOpen}
-        title="Save profile changes?"
-        message="This will update your account details."
-        confirmLabel="Save"
+        title={t("profile.saveDialogTitle")}
+        message={t("profile.saveDialogMsg")}
+        confirmLabel={t("common.save")}
         onCancel={() => setConfirmOpen(false)}
         onConfirm={handleConfirmSave}
       />
       <ErrorModal
         open={errorModal.open}
-        title="Unable to save"
+        title={t("common.unableToSave")}
         message={errorModal.message}
         onClose={() => setErrorModal((prev) => ({ ...prev, open: false }))}
       />

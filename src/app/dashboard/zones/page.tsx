@@ -7,10 +7,12 @@ import ZoneCard from '@/components/zones/ZoneCard'
 import ErrorModal from '@/components/ui/ErrorModal'
 import type { Zone } from '@/types/db'
 import { useFarmContext } from '@/context/FarmContext'
+import { useTranslations } from '@/lib/useTranslations'
 
 export default function ZonesPage() {
   const [zones, setZones] = useState<Zone[]>([])
   const { activeFarm } = useFarmContext()
+  const { t } = useTranslations()
   const [loading, setLoading] = useState(true)
   const [errorModal, setErrorModal] = useState({
     open: false,
@@ -56,35 +58,41 @@ export default function ZonesPage() {
   if (!activeFarm) return (
     <div className="max-w-md mx-auto mt-20 text-center p-8 bg-white rounded-2xl border border-slate-200 shadow-sm">
       <div className="text-4xl mb-4">🚜</div>
-      <h2 className="text-xl font-bold text-slate-900">No Farm Detected</h2>
-      <p className="text-slate-500 mt-2 mb-6">You need to set up your farm profile before you can define cultivation zones.</p>
+      <h2 className="text-xl font-bold text-slate-900">{t('zones.noFarm.title')}</h2>
+      <p className="text-slate-500 mt-2 mb-6">{t('zones.noFarm.desc')}</p>
       <Link href="/dashboard" className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors">
-        Go to Dashboard →
+        {t('zones.noFarm.cta')}
       </Link>
     </div>
   )
+
+  const subtitleParts = t('zones.subtitle').split('{farm}')
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 p-4">
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-6">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Farm Zones</h1>
-          <p className="text-slate-500 mt-1">Manage and monitor specific areas of <span className="font-semibold text-slate-700">{activeFarm.name}</span></p>
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">{t('zones.title')}</h1>
+          <p className="text-slate-500 mt-1">
+            {subtitleParts[0]}
+            <span className="font-semibold text-slate-700">{activeFarm.name}</span>
+            {subtitleParts[1] ?? ''}
+          </p>
         </div>
-        
+
         <Link
           href="/dashboard/zones/create"
           className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold transition-all shadow-sm bg-green-600 text-white hover:bg-green-700"
         >
-          + Add New Zone
+          {t('zones.add')}
         </Link>
       </div>
 
       {/* Zones Display */}
       {!zones.length ? (
         <div className="text-center py-20 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
-          <p className="text-slate-500 italic">No zones mapped yet. Click &quot;Add New Zone&quot; to get started.</p>
+          <p className="text-slate-500 italic">{t('zones.empty')}</p>
         </div>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -97,7 +105,7 @@ export default function ZonesPage() {
       )}
       <ErrorModal
         open={errorModal.open}
-        title="Unable to save"
+        title={t('common.unableToSave')}
         message={errorModal.message}
         onClose={() =>
           setErrorModal((prev) => ({ ...prev, open: false }))
