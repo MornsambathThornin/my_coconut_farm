@@ -19,7 +19,7 @@ type Farm = {
   notes?: string | null
 }
 
-export default function FarmEditClient({ initialFarm }: { initialFarm: Farm }) {
+export default function FarmEditClient({ initialFarm }: { initialFarm: Farm | null }) {
   const router = useRouter()
   const { user, loading: authLoading } = useAuthUser()
   const { t } = useTranslations()
@@ -87,9 +87,9 @@ export default function FarmEditClient({ initialFarm }: { initialFarm: Farm }) {
     return (
       <div className="max-w-md mx-auto mt-20 text-center p-8 bg-white rounded-2xl border border-slate-200 shadow-sm">
         <div className="text-4xl mb-4">🚜</div>
-        <h2 className="text-xl font-bold text-slate-900">{t('farmEdit.noFarmTitle')}</h2>
-        <p className="text-slate-500 mt-2 mb-6">{t('farmEdit.noFarmDesc')}</p>
-        <Link href="/dashboard" className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors">{t('zones.noFarm.cta')}</Link>
+        <h2 className="text-xl font-bold text-slate-900">{t('farmEdit.notFoundTitle')}</h2>
+        <p className="text-slate-500 mt-2 mb-6">{t('farmEdit.notFoundDesc')}</p>
+        <Link href="/dashboard/farms" className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors">{t('farmEdit.back')}</Link>
       </div>
     )
   }

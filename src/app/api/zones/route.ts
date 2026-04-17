@@ -10,7 +10,10 @@ export async function GET(req: NextRequest) {
   }
 
   const farmId = req.nextUrl.searchParams.get('farm_id')
-  let query = sb.from('zones').select('*').order('name')
+  let query = sb
+    .from('zones')
+    .select('*, crop_type:crop_types(id, name_en, name_km, category, default_unit)')
+    .order('name')
   if (farmId) {
     query = query.eq('farm_id', farmId)
   }

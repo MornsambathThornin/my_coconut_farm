@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import FarmEditClient from '@/components/FarmEditClient'
 import { getFarmByIdServer } from '@/lib/api/supabaseServer'
 
@@ -25,21 +24,12 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
     farm = null
   }
 
-  if (!farm) {
-    return (
-      <div className="max-w-md mx-auto mt-20 text-center p-8 bg-white rounded-2xl border border-slate-200 shadow-sm">
-        <div className="text-4xl mb-4">🚜</div>
-        <h2 className="text-xl font-bold text-slate-900">Farm Not Found</h2>
-        <p className="text-slate-500 mt-2 mb-6">The requested farm could not be found or you do not have access.</p>
-        <Link href="/dashboard/farms" className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors">Back to Farms</Link>
-      </div>
-    )
-  }
-
-  const normalized = {
-    ...farm,
-    boundary: Array.isArray(farm.boundary) ? (farm.boundary as [number, number][]) : null,
-  }
+  const normalized = farm
+    ? {
+        ...farm,
+        boundary: Array.isArray(farm.boundary) ? (farm.boundary as [number, number][]) : null,
+      }
+    : null
 
   return <FarmEditClient initialFarm={normalized} />
 }

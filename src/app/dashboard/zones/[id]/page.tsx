@@ -24,6 +24,7 @@ import {
   type Harvest,
 } from "@/lib/helpers";
 import { useTranslations } from "@/lib/useTranslations";
+import { getCropIcon, type CropCategory } from "@/lib/cropIcon";
 import type { CropType, Zone } from "@/types/db";
 
 type ForecastRow = {
@@ -55,13 +56,12 @@ type PlantationBatch = {
   notes: string | null;
 };
 
-import { 
-  ChevronLeft, 
-  Sprout, 
-  Droplets, 
-  Grape, 
-  Activity, 
-  Calendar, 
+import {
+  ChevronLeft,
+  Droplets,
+  Grape,
+  Activity,
+  Calendar,
   Info,
   History,
   TrendingUp,
@@ -445,7 +445,15 @@ export default function ZoneDetailPage() {
               </h1>
               <p className="text-slate-500 mt-1 flex flex-col gap-2">
                 <span className="flex items-center gap-2">
-                  <Sprout className="w-4 h-4 text-green-500" />
+                  {(() => {
+                    const cropIcon = getCropIcon(
+                      displayZone?.crop_type?.category as CropCategory,
+                    );
+                    const CropIconComp = cropIcon.Icon;
+                    return (
+                      <CropIconComp className={`w-4 h-4 ${cropIcon.accentClass}`} />
+                    );
+                  })()}
                   {t("zone.variety")}:{" "}
                   <span className="font-semibold text-slate-700">
                     {displayZone?.variety ||

@@ -40,3 +40,14 @@ A running log of notable changes to the farm dashboard, focused on the migration
   - **Zone detail page** fully translated: loading/error states, back link, Zone Active / Edit Zone / Delete Zone action pills, Mixed variety fallback, Total Production footer, Production Trend and Seasonal Forecast section headings and empty states (with `{month}`/`{yield}`/`{confidence}` interpolation in the latest-forecast sentence), Zone Map heading and no-boundary fallback, Harvest tab (New Harvest heading, Add Harvest button, Harvest History table headers, dialog title), Irrigation tab (Log Irrigation heading, Add Irrigation button, Irrigation Logs table headers, dialog title), Batches tab (planting-batch form placeholders, submit/submitting states, confirmation, error, table headers), Edit Zone dialog (labels reuse `zoneCreate.*`), Delete Zone confirmation + error dialogs + success toast (new `zoneDetail.*` keys).
   - **Farm edit page** (`FarmEditClient`) translated: title, subtitle, back link, form labels (name, location, total area with placeholder), save/saving button states, confirmation dialog, error dialog, success toast, and the no-farm fallback (new `farmEdit.*` keys; the server-rendered farm-not-found page remains English for now since it has no locale context).
   - **Farm, Harvest, and Irrigation forms** translated: labels, placeholders, validation error messages, submit/submitting states, confirmation dialog titles + messages, error and success toasts. `FarmCreateForm` picks up new `farmForm.*` keys, `HarvestForm` picks up `harvestForm.*`, and `IrrigationForm` picks up `irrigationForm.*` (all paired with Khmer translations).
+  - **Farm edit not-found state is now translatable.** The server page at `src/app/dashboard/farm/[id]/edit/page.tsx` no longer renders its own English fallback; it always hands off to `FarmEditClient`, which renders the localized `farmEdit.notFoundTitle` / `farmEdit.notFoundDesc` / `farmEdit.back` card when `initialFarm` is `null`.
+- **Dynamic crop-category icons** (`src/lib/cropIcon.ts`). A new `getCropIcon(category)` helper maps `crop_types.category` to a Lucide icon, emoji, and accent color so the UI reflects the crop:
+  - `tree` → palm tree (coconut, etc.)
+  - `fruit` → apple / 🍌
+  - `root` → carrot / 🥔
+  - `cereal` → wheat / 🌾
+  - `other` → leaf / 🌱
+  - fallback → sprout / 🌱
+  - `ZoneCard` now shows a category emoji badge and uses the dynamic emoji for the "Plants" line (no more hardcoded 🌴 assumption, no more "Trees:" label for non-tree crops).
+  - Zone detail hero's variety row now renders the category icon with its accent color instead of the hardcoded `Sprout` icon, giving coconut zones a palm-tree glyph, rice zones a wheat glyph, cassava zones a carrot glyph, etc.
+  - `GET /api/zones` now joins `crop_type:crop_types(id, name_en, name_km, category, default_unit)` so the list page has the category without a second round-trip.
