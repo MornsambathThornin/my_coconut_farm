@@ -1,5 +1,4 @@
 import { supabase as browserSupabase } from '@/utils/supabase/client'
-import type { Zone } from '@/types/db'
 
 type Farm = {
   id?: string

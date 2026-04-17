@@ -14,6 +14,14 @@ A running log of notable changes to the farm dashboard, focused on the migration
   - Farm-name input placeholder changed from `"e.g. North Coconut Grove"` to `"e.g. North Field"` (`src/components/FarmCreateForm.tsx`).
   - RLS policies SQL header comment updated from "Coconut Farm Dashboard" to "Farm Management Dashboard" (`src/lib/rls-policies.sql`).
 
+### Fixed
+- **ESLint errors blocking CI** cleared so `npm run lint` exits clean:
+  - `LocaleContext.tsx`: post-mount `localStorage` read is kept in an effect with a targeted `eslint-disable-next-line` and a rationale (SSR hydration mismatch would otherwise force the first paint to use the wrong locale).
+  - `HarvestForm.tsx`: dropped the synchronous `setPrefilledZone(null)` reset; the fetch callback now writes the value asynchronously and the previous null-reset was unreachable in practice.
+  - `FarmContext.tsx`: wrapped the URL-sync effect in a block-level `eslint-disable` with a rationale (syncing `activeFarmId` from the URL and the farms list is a legitimate external-source sync).
+  - `ZoneDrawMap.tsx`: moved the `handlePolygonCompleteRef` assignment out of the render body and into a `useEffect`, fixing `react-hooks/refs`.
+  - `src/lib/api/supabaseClient.ts`: removed an unused `Zone` import.
+
 ### Added
 - **Locale switcher and wider i18n wiring** so the UI can be toggled between English and Khmer (ខ្មែរ):
   - New `LocaleContext` / `LocaleProvider` with `localStorage` persistence (`src/context/LocaleContext.tsx`).

@@ -46,6 +46,7 @@ export function FarmProvider({ children }: { children: React.ReactNode }) {
   )
   const lastQueryFarmIdRef = useRef<string | null>(searchParams.get("farm_id"))
 
+  /* eslint-disable react-hooks/set-state-in-effect -- syncing activeFarmId from the URL and the farms list is a legitimate external-source sync that has to run post-mount */
   useEffect(() => {
     const queryFarmId = searchParams.get("farm_id")
     if (queryFarmId === lastQueryFarmIdRef.current) {
@@ -69,6 +70,7 @@ export function FarmProvider({ children }: { children: React.ReactNode }) {
       setActiveFarmId(farms[0].id ?? null)
     }
   }, [searchParams, farms, activeFarmId])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     const currentParam = searchParams.get("farm_id")

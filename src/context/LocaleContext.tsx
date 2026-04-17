@@ -25,6 +25,7 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     if (typeof window === 'undefined') return
     const saved = window.localStorage.getItem(STORAGE_KEY)
     if (saved === 'en' || saved === 'km') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reading persisted locale requires a post-mount setState to avoid SSR hydration mismatch
       setLocaleState(saved)
     }
   }, [])

@@ -76,10 +76,7 @@ export default function HarvestForm({ zoneId, farmId, onSuccess }: Props) {
   }, [zoneId, resolvedFarmId])
 
   useEffect(() => {
-    if (!zoneId) {
-      setPrefilledZone(null)
-      return
-    }
+    if (!zoneId) return
 
     const fetchZone = async () => {
       const { data } = await supabase

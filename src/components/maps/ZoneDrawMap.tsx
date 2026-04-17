@@ -277,7 +277,9 @@ export default function ZoneDrawMap({
   }, [limitPath, occupiedBoundaries, onBoundaryChange, onAreaChange])
 
   const handlePolygonCompleteRef = useRef(handlePolygonComplete)
-  handlePolygonCompleteRef.current = handlePolygonComplete
+  useEffect(() => {
+    handlePolygonCompleteRef.current = handlePolygonComplete
+  }, [handlePolygonComplete])
 
   useEffect(() => {
     if (!map || !window.google?.maps?.drawing) return
