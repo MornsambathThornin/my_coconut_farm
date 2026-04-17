@@ -6,6 +6,7 @@ type Props = {
   message: string
   confirmLabel?: string
   cancelLabel?: string
+  loading?: boolean
   onConfirm: () => void
   onCancel: () => void
 }
@@ -16,6 +17,7 @@ export default function ConfirmModal({
   message,
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
+  loading = false,
   onConfirm,
   onCancel,
 }: Props) {
@@ -30,14 +32,16 @@ export default function ConfirmModal({
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            disabled={loading}
+            className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:pointer-events-none"
           >
             {cancelLabel}
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+            disabled={loading}
+            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50 disabled:pointer-events-none"
           >
             {confirmLabel}
           </button>

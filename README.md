@@ -41,6 +41,18 @@ Run the dev server:
 
 ```bash
 npm run dev
+
+## Tests
+
+```bash
+npm run test
+```
+
+To run tests in watch mode:
+
+```bash
+npm run test:watch
+```
 ```
 
 Open http://localhost:3000

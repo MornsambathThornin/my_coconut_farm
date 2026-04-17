@@ -1,22 +1,16 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/utils/supabase/client'
-import { ensureProfileAndFarm } from '@/lib/helpers'
 import { useAuthUser } from '@/lib/useAuthUser'
 import Link from 'next/link'
 import ZoneCard from '@/components/zones/ZoneCard'
 import ErrorModal from '@/components/ui/ErrorModal'
 import type { Zone } from '@/types/db'
-
-type Farm = {
-  id: string
-  name: string
-}
+import { useFarmContext } from '@/context/FarmContext'
 
 export default function ZonesPage() {
   const [zones, setZones] = useState<Zone[]>([])
-  const [farm, setFarm] = useState<Farm | null>(null)
+  const { activeFarm } = useFarmContext()
   const [loading, setLoading] = useState(true)
   const [errorModal, setErrorModal] = useState({
     open: false,
@@ -24,47 +18,34 @@ export default function ZonesPage() {
   })
   const { user, loading: authLoading } = useAuthUser()
 
-  async function fetchZones(farmId: string, userId: string) {
-    const { data, error: zonesError } = await supabase
-      .from('zones')
-      .select('*')
-      .eq('farm_id', farmId)
-      .eq('user_id', userId)
-      .order('name')
-
-    if (zonesError) {
+  async function fetchZones(farmId: string) {
+    const res = await fetch(`/api/zones?farm_id=${farmId}`)
+    const payload = await res.json()
+    if (!res.ok) {
       setErrorModal({
         open: true,
-        message: zonesError.message,
+        message: payload?.error || 'Unable to load zones',
       })
     } else {
-      setZones(data || [])
+      setZones(payload || [])
     }
   }
 
   useEffect(() => {
-    async function load() {
-      if (!user) return
-
-      const farm = await ensureProfileAndFarm(
-        user.id,
-        user.email
-      )
-      setFarm(farm)
-      if (!farm) {
+    const load = async () => {
+      if (!user || !activeFarm || !activeFarm.id) {
         setLoading(false)
         return
       }
 
-      await fetchZones(farm.id, user.id)
-
+      await fetchZones(activeFarm.id)
       setLoading(false)
     }
 
     if (!authLoading) {
       load()
     }
-  }, [authLoading, user])
+  }, [authLoading, user, activeFarm])
 
   if (loading || authLoading) return (
     <div className="flex items-center justify-center min-h-[400px]">
@@ -72,7 +53,7 @@ export default function ZonesPage() {
     </div>
   )
 
-  if (!farm) return (
+  if (!activeFarm) return (
     <div className="max-w-md mx-auto mt-20 text-center p-8 bg-white rounded-2xl border border-slate-200 shadow-sm">
       <div className="text-4xl mb-4">🚜</div>
       <h2 className="text-xl font-bold text-slate-900">No Farm Detected</h2>
@@ -89,7 +70,7 @@ export default function ZonesPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-6">
         <div>
           <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Farm Zones</h1>
-          <p className="text-slate-500 mt-1">Manage and monitor specific areas of <span className="font-semibold text-slate-700">{farm.name}</span></p>
+          <p className="text-slate-500 mt-1">Manage and monitor specific areas of <span className="font-semibold text-slate-700">{activeFarm.name}</span></p>
         </div>
         
         <Link

@@ -11,6 +11,7 @@ export interface Harvest {
   zones?: {
     name: string | null
     tree_count?: number | null
+    area_ha?: number | null
   }[] | null
 }
 
@@ -49,12 +50,12 @@ export function sumHarvestQuantity(harvests: Harvest[]) {
   )
 }
 
-export function calculateYieldPerTree(
+export function calculateYieldPerHectare(
   totalQuantity: number,
-  treeCount?: number | null
+  areaHa?: number | null
 ) {
-  if (!treeCount || treeCount <= 0) return 0
-  return totalQuantity / treeCount
+  if (!areaHa || areaHa <= 0) return 0
+  return totalQuantity / areaHa
 }
 
 export function filterHarvestsByDateRange(

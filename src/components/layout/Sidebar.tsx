@@ -6,6 +6,7 @@ import { supabase } from '@/utils/supabase/client'
 // Optional: If you use Lucide icons (common in modern Next.js projects)
 import { 
   LayoutDashboard, 
+  Home,
   Map, 
   Grape, 
   Droplets, 
@@ -16,6 +17,7 @@ import {
 
 const menu = [
   { name: 'Overview', path: '/dashboard', icon: LayoutDashboard },
+  { name: 'Farms', path: '/dashboard/farms', icon: Home },
   { name: 'Zones', path: '/dashboard/zones', icon: Map },
   { name: 'Harvest', path: '/dashboard/harvest', icon: Grape },
   { name: 'Irrigation', path: '/dashboard/irrigation', icon: Droplets },

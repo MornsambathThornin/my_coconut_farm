@@ -7,18 +7,21 @@ import ZoneComparisonChart from '@/components/charts/ZoneComparisonChart'
 import DateRangeFilter from '@/components/forms/DateRangeFilter'
 import { useAuthUser } from '@/lib/useAuthUser'
 import {
-  calculateYieldPerTree,
+  calculateYieldPerHectare,
   filterHarvestsByDateRange,
   groupHarvestByMonth,
   groupHarvestByZone,
   sumHarvestQuantity,
 } from '@/lib/helpers'
 import type { Harvest } from '@/lib/helpers'
+import { useTranslations } from '@/lib/useTranslations'
+import { useFarmContext } from '@/context/FarmContext'
 
 type Zone = {
   id: string
   name: string
   tree_count: number | null
+  area_ha: number | null
 }
 
 export default function ReportsPage() {
@@ -30,10 +33,17 @@ export default function ReportsPage() {
     getCurrentYearRange()
   )
   const { user, loading: authLoading } = useAuthUser()
+  const { t } = useTranslations()
+  const { activeFarm } = useFarmContext()
 
   useEffect(() => {
     const load = async () => {
-      if (!user) return
+      if (!user || !activeFarm) {
+        setHarvests([])
+        setZones([])
+        setLoading(false)
+        return
+      }
 
       const { data: harvestData, error: harvestError } =
         await supabase
@@ -48,16 +58,19 @@ export default function ReportsPage() {
           notes,
           zones (
             name,
-            tree_count
+            tree_count,
+            area_ha
           )
         `)
         .eq('user_id', user.id)
+        .eq('zones.farm_id', activeFarm.id)
 
       const { data: zoneData, error: zonesError } =
         await supabase
         .from('zones')
-        .select('id, name, tree_count')
+        .select('id, name, tree_count, area_ha')
         .eq('user_id', user.id)
+        .eq('farm_id', activeFarm.id)
         .order('name')
 
       if (harvestError || zonesError) {
@@ -74,7 +87,7 @@ export default function ReportsPage() {
     if (!authLoading) {
       load()
     }
-  }, [authLoading, user])
+  }, [authLoading, user, activeFarm])
 
   const filteredHarvests = useMemo(
     () =>
@@ -102,16 +115,16 @@ export default function ReportsPage() {
         (h) => h.zone_id === zone.id
       )
       const total = sumHarvestQuantity(zoneHarvests)
-      const yieldPerTree = calculateYieldPerTree(
+      const yieldPerHa = calculateYieldPerHectare(
         total,
-        zone.tree_count
+        zone.area_ha
       )
 
       return {
         zone: zone.name,
         total,
-        yieldPerTree,
-        treeCount: zone.tree_count,
+        yieldPerHa,
+        area: zone.area_ha,
       }
     })
   }, [zones, filteredHarvests])
@@ -121,22 +134,28 @@ export default function ReportsPage() {
     [filteredHarvests]
   )
 
-  const totalTrees = useMemo(
+  const totalArea = useMemo(
     () =>
       zones.reduce(
-        (sum, z) => sum + Number(z.tree_count || 0),
+        (sum, z) => sum + Number(z.area_ha || 0),
         0
       ),
     [zones]
   )
 
-  const overallYieldPerTree = useMemo(
-    () => calculateYieldPerTree(totalHarvest, totalTrees),
-    [totalHarvest, totalTrees]
+  const overallYieldPerHa = useMemo(
+    () => calculateYieldPerHectare(totalHarvest, totalArea),
+    [totalHarvest, totalArea]
   )
 
   const handleExportCsv = () => {
+    const farmName = activeFarm?.name || 'Unknown Farm'
+    const farmIdentifier = activeFarm?.id || '—'
     const csvLines = [
+      'Farm Details',
+      `Farm Name,${formatCsvValue(farmName)}`,
+      `Farm ID,${formatCsvValue(farmIdentifier)}`,
+      '',
       'Harvest Data',
       'Date,Zone,Quantity,Unit,Grade,Notes',
       ...filteredHarvests.map((h) => {
@@ -152,14 +171,14 @@ export default function ReportsPage() {
       }),
       '',
       'Zone Summary',
-      'Zone,Total Quantity,Yield Per Tree',
+      'Zone,Total Quantity,Area (ha),Yield Per Hectare',
       ...zoneSummaries.map((z) => {
-        const yieldDisplay = z.treeCount
-          ? z.yieldPerTree.toFixed(2)
-          : ''
+        const yieldDisplay = z.yieldPerHa ? z.yieldPerHa.toFixed(2) : ''
+        const areaDisplay = z.area != null ? z.area.toFixed(2) : ''
         return [
           formatCsvValue(z.zone),
           formatCsvValue(z.total),
+          formatCsvValue(areaDisplay),
           formatCsvValue(yieldDisplay),
         ].join(',')
       }),
@@ -195,17 +214,22 @@ export default function ReportsPage() {
     <div className="max-w-6xl mx-auto space-y-8 p-4">
       <div className="bg-gradient-to-r from-green-700 to-emerald-600 rounded-3xl p-6 md:p-8 text-white shadow-lg">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/70">
-              Reports
-            </p>
-            <h1 className="text-3xl font-extrabold tracking-tight mt-2">
-              Overview
-            </h1>
-            <p className="text-sm text-white/85 mt-3 max-w-xl leading-relaxed">
-              Filter a date range to see yield trends, compare zones, and export a clean summary.
-            </p>
-          </div>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/70">
+            Reports
+          </p>
+          <h1 className="text-3xl font-extrabold tracking-tight mt-2">
+            {t("reports.title")}
+          </h1>
+          <p className="text-sm text-white/85 mt-3 max-w-xl leading-relaxed">
+            {t("reports.subtitle")}
+          </p>
+          <p className="text-xs text-white/70 mt-2">
+            {activeFarm
+              ? `Active farm: ${activeFarm.name}`
+              : "Select a farm to view reports."}
+          </p>
+        </div>
           <button
             type="button"
             onClick={handleExportCsv}
@@ -237,13 +261,13 @@ export default function ReportsPage() {
         </div>
         <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-            Yield per Tree
+            {t("reports.yieldPerHa")}
           </p>
           <p className="text-2xl font-extrabold text-green-700 mt-2">
-            {totalTrees ? overallYieldPerTree.toFixed(2) : '-'}
+            {totalArea ? overallYieldPerHa.toFixed(1) : '-'}
           </p>
           <p className="text-xs text-slate-500 mt-1">
-            Based on {totalTrees || 0} trees
+            Based on {totalArea ? totalArea.toFixed(2) : '0.00'} ha
           </p>
         </div>
         <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
@@ -307,7 +331,7 @@ export default function ReportsPage() {
         <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
           <div className="p-4 border-b border-slate-100">
             <h3 className="text-sm font-bold uppercase tracking-widest text-slate-500">
-              Zone Performance
+              {t("reports.zonePerformance")}
             </h3>
           </div>
           {zoneSummaries.length === 0 ? (
@@ -327,12 +351,17 @@ export default function ReportsPage() {
                     </p>
                   </div>
                   <div className="mt-2 text-xs text-slate-500">
-                    Yield per tree:{' '}
+                    {t("reports.yieldPerHa")}:{' '}
                     <span className="font-semibold text-slate-700">
-                      {zone.treeCount
-                        ? zone.yieldPerTree.toFixed(2)
+                      {zone.yieldPerHa
+                        ? zone.yieldPerHa.toFixed(2)
                         : '-'}
                     </span>
+                  </div>
+                  <div className="text-xs text-slate-400">
+                    {zone.area != null
+                      ? `${zone.area.toFixed(2)} ha`
+                      : 'Area unknown'}
                   </div>
                 </div>
               ))}

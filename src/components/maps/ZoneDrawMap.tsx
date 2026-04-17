@@ -1,10 +1,9 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   GoogleMap,
   Polygon,
-  DrawingManager,
   Marker,
   useJsApiLoader,
 } from '@react-google-maps/api'
@@ -83,13 +82,24 @@ export default function ZoneDrawMap({
   useEffect(() => {
     if (!showLocate) return
     let cancelled = false
-    if (!navigator.geolocation) {
-      setLocateError('Geolocation is not supported in this browser.')
-      setMapCenter(fallbackCenter)
-      return
+    const schedule = (fn: () => void) => {
+      const id = window.setTimeout(fn, 0)
+      return () => window.clearTimeout(id)
     }
 
-    setLocating(true)
+    if (!navigator.geolocation) {
+      return schedule(() => {
+        if (cancelled) return
+        setLocateError('Geolocation is not supported in this browser.')
+        setMapCenter(fallbackCenter)
+      })
+    }
+
+    schedule(() => {
+      if (cancelled) return
+      setLocating(true)
+    })
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
         if (cancelled) return
@@ -97,15 +107,21 @@ export default function ZoneDrawMap({
           lat: position.coords.latitude,
           lng: position.coords.longitude,
         }
-        setMapCenter(next)
-        setUserLocation(next)
-        setLocating(false)
+        schedule(() => {
+          if (cancelled) return
+          setMapCenter(next)
+          setUserLocation(next)
+          setLocating(false)
+        })
       },
       () => {
         if (cancelled) return
-        setLocateError('Location permission denied. Showing Cambodia.')
-        setMapCenter(fallbackCenter)
-        setLocating(false)
+        schedule(() => {
+          if (cancelled) return
+          setLocateError('Location permission denied. Showing Cambodia.')
+          setMapCenter(fallbackCenter)
+          setLocating(false)
+        })
       },
       { enableHighAccuracy: true, timeout: 10000 }
     )
@@ -191,7 +207,7 @@ export default function ZoneDrawMap({
     return false
   }
 
-  const handlePolygonComplete = (polygon: google.maps.Polygon) => {
+  const handlePolygonComplete = useCallback((polygon: google.maps.Polygon) => {
     const points = polygon
       .getPath()
       .getArray()
@@ -258,7 +274,37 @@ export default function ZoneDrawMap({
 
     polygon.setMap(null)
     onBoundaryChange(points)
-  }
+  }, [limitPath, occupiedBoundaries, onBoundaryChange, onAreaChange])
+
+  const handlePolygonCompleteRef = useRef(handlePolygonComplete)
+  handlePolygonCompleteRef.current = handlePolygonComplete
+
+  useEffect(() => {
+    if (!map || !window.google?.maps?.drawing) return
+    const drawingManager = new window.google.maps.drawing.DrawingManager({
+      drawingControl: true,
+      drawingControlOptions: {
+        position: window.google.maps.ControlPosition.TOP_CENTER,
+        drawingModes: [window.google.maps.drawing.OverlayType.POLYGON],
+      },
+      polygonOptions: {
+        fillColor: '#ffffff',
+        fillOpacity: 0.25,
+        strokeColor: '#2dc0fb',
+        strokeWeight: 2,
+      },
+    })
+    drawingManager.setMap(map)
+    const listener = window.google.maps.event.addListener(
+      drawingManager,
+      'polygoncomplete',
+      (polygon: google.maps.Polygon) => handlePolygonCompleteRef.current(polygon)
+    )
+    return () => {
+      window.google.maps.event.removeListener(listener)
+      drawingManager.setMap(null)
+    }
+  }, [map])
 
   const handleLocate = () => {
     if (locating) return
@@ -403,22 +449,6 @@ export default function ZoneDrawMap({
             }}
           />
         ) : null}
-        <DrawingManager
-          options={{
-            drawingControl: true,
-            drawingControlOptions: {
-              position: window.google.maps.ControlPosition.TOP_CENTER,
-              drawingModes: [window.google.maps.drawing.OverlayType.POLYGON],
-            },
-            polygonOptions: {
-              fillColor: '#ffffff',
-              fillOpacity: 0.25,
-              strokeColor: '#2dc0fb',
-              strokeWeight: 2,
-            },
-          }}
-          onPolygonComplete={handlePolygonComplete}
-        />
       </GoogleMap>
     </div>
   )

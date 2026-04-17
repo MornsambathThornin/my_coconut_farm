@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react'
 import IrrigationForm from '@/components/forms/IrrigationForm'
 import FormDialog from '@/components/ui/FormDialog'
-import { supabase } from '@/utils/supabase/client'
 import { useAuthUser } from '@/lib/useAuthUser'
+import { useFarmContext } from '@/context/FarmContext'
 
 type IrrigationLog = {
   id: string
@@ -19,37 +19,38 @@ type IrrigationLog = {
 
 export default function IrrigationPage() {
   const { user, loading: authLoading } = useAuthUser()
+  const { activeFarm } = useFarmContext()
   const [logs, setLogs] = useState<IrrigationLog[]>([])
-  const [loading, setLoading] = useState(true)
+  const [fetching, setFetching] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [formOpen, setFormOpen] = useState(false)
+  const loading = authLoading || fetching
 
-  const fetchLogs = async (userId: string) => {
-    const { data, error: fetchError } = await supabase
-      .from('irrigation_logs')
-      .select(
-        'id, irrigation_date, method, duration_minutes, water_source, notes, zone_id, zones(name)'
-      )
-      .eq('user_id', userId)
-      .order('irrigation_date', { ascending: false })
-
-    if (fetchError) {
-      setError(fetchError.message)
-    } else {
-      setLogs(data || [])
+  const fetchLogs = async () => {
+    if (!activeFarm?.id) {
+      setLogs([])
+      setFetching(false)
+      return
     }
+    setFetching(true)
+    setError(null)
+    const res = await fetch(`/api/irrigation-logs?farm_id=${encodeURIComponent(activeFarm.id)}`)
+    const payload = await res.json()
+    if (!res.ok) {
+      setError(payload?.error || 'Unable to load irrigation logs')
+    } else {
+      setLogs(payload || [])
+    }
+    setFetching(false)
   }
 
   useEffect(() => {
     if (authLoading) return
-    if (!user) {
-      setLoading(false)
-      return
-    }
+    if (!user) return
 
-    setLoading(true)
-    fetchLogs(user.id).finally(() => setLoading(false))
-  }, [authLoading, user])
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchLogs()
+  }, [authLoading, user, activeFarm?.id])
 
   if (loading || authLoading) {
     return (
@@ -75,13 +76,20 @@ export default function IrrigationPage() {
             Irrigation Logs
           </h1>
           <p className="text-slate-500 mt-1">
-            View irrigation activity across all zones.
+            {activeFarm
+              ? `Viewing irrigation records for ${activeFarm.name}`
+              : "Select a farm to see irrigation logs."}
           </p>
         </div>
         <button
           type="button"
           onClick={() => setFormOpen(true)}
-          className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+          disabled={!activeFarm}
+          className={`rounded-xl px-4 py-2 text-sm font-semibold text-white transition ${
+            activeFarm
+              ? "bg-blue-600 hover:bg-blue-700"
+              : "bg-slate-300 cursor-not-allowed"
+          }`}
         >
           Add Irrigation
         </button>
@@ -141,9 +149,10 @@ export default function IrrigationPage() {
       >
         <IrrigationForm
           onSuccess={() => {
-            if (user) fetchLogs(user.id)
+            if (user) fetchLogs()
             setFormOpen(false)
           }}
+          farmId={activeFarm?.id}
         />
       </FormDialog>
     </div>

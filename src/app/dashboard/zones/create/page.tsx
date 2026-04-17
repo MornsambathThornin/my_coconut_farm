@@ -4,70 +4,70 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/utils/supabase/client'
-import { ensureProfileAndFarm } from '@/lib/helpers'
 import { useAuthUser } from '@/lib/useAuthUser'
 import ZoneDrawMap from '@/components/maps/ZoneDrawMap'
 import Toast from '@/components/ui/Toast'
-
-type Farm = {
-  id: string
-  name: string
-  boundary?: [number, number][] | null
-}
+import ConfirmModal from '@/components/ui/ConfirmModal'
+import type { CropType } from '@/types/db'
+import { useFarmContext } from '@/context/FarmContext'
 
 export default function ZoneCreatePage() {
   const router = useRouter()
   const { user, loading: authLoading } = useAuthUser()
-  const [farm, setFarm] = useState<Farm | null>(null)
+  const { activeFarm } = useFarmContext()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [toast, setToast] = useState({ open: false, message: '' })
+  const [confirmOpen, setConfirmOpen] = useState(false)
   const [boundary, setBoundary] = useState<[number, number][]>([])
   const [occupiedBoundaries, setOccupiedBoundaries] = useState<
     [number, number][][]
   >([])
+  const [cropTypes, setCropTypes] = useState<CropType[]>([])
   const [form, setForm] = useState({
     name: '',
     area_ha: '',
     tree_count: '',
     avg_tree_age_years: '',
     variety: '',
+    crop_type_id: '',
   })
 
   useEffect(() => {
     const load = async () => {
-      if (!user) return
-      const resolvedFarm = await ensureProfileAndFarm(
-        user.id,
-        user.email
-      )
-      setFarm(resolvedFarm)
-      if (resolvedFarm?.id) {
-        const { data: zonesData } = await supabase
-          .from('zones')
-          .select('boundary')
-          .eq('user_id', user.id)
-          .eq('farm_id', resolvedFarm.id)
-        const boundaries =
-          zonesData
-            ?.map((z) => z.boundary)
-            .filter(
-              (b): b is [number, number][] =>
-                Array.isArray(b) && b.length > 2
-            ) || []
-        setOccupiedBoundaries(boundaries)
+      if (!user || !activeFarm) {
+        setLoading(false)
+        return
       }
+      const { data: zonesData } = await supabase
+        .from('zones')
+        .select('boundary')
+        .eq('user_id', user.id)
+        .eq('farm_id', activeFarm.id)
+      const boundaries =
+        zonesData
+          ?.map((z) => z.boundary)
+          .filter(
+            (b): b is [number, number][] =>
+              Array.isArray(b) && b.length > 2
+          ) || []
+      setOccupiedBoundaries(boundaries)
+      const cropRes = await fetch('/api/crop-types')
+      const cropPayload = await cropRes.json()
+      setCropTypes(cropRes.ok ? (cropPayload || []) : [])
       setLoading(false)
     }
 
     if (!authLoading) {
       load()
     }
-  }, [authLoading, user])
+  }, [authLoading, user, activeFarm])
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
   ) => {
     setForm({ ...form, [e.target.name]: e.target.value })
   }
@@ -81,38 +81,49 @@ export default function ZoneCreatePage() {
     if (!boundary.length) return 0
     return Math.max(0, boundary.length - 1)
   }, [boundary])
+  const selectedCropType = cropTypes.find(
+    (type) => type.id === form.crop_type_id
+  )
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!user || !farm) return
+    if (!user || !activeFarm) {
+      setError("Please pick a farm before creating a zone.")
+      return
+    }
 
     if (!boundary.length) {
       setError('Draw zone first to save boundary.')
       return
     }
 
+    setConfirmOpen(true)
+  }
+
+  const handleConfirmCreate = async () => {
+    if (!user || !activeFarm) return
+    setConfirmOpen(false)
     setSaving(true)
     setError(null)
 
-    const { error: insertError } = await supabase
-      .from('zones')
-      .insert({
-        user_id: user.id,
-        farm_id: farm.id,
+    const res = await fetch('/api/zones', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        farm_id: activeFarm.id,
         name: form.name,
         area_ha: form.area_ha ? Number(form.area_ha) : null,
-        tree_count: form.tree_count
-          ? Number(form.tree_count)
-          : null,
-        avg_tree_age_years: form.avg_tree_age_years
-          ? Number(form.avg_tree_age_years)
-          : null,
+        tree_count: form.tree_count ? Number(form.tree_count) : null,
+        avg_tree_age_years: form.avg_tree_age_years ? Number(form.avg_tree_age_years) : null,
         variety: form.variety || null,
+        crop_type_id: form.crop_type_id || null,
         boundary,
-      })
+      }),
+    })
 
-    if (insertError) {
-      setError(insertError.message)
+    const payload = await res.json()
+    if (!res.ok) {
+      setError(payload?.error || 'Unable to create zone')
       setSaving(false)
       return
     }
@@ -129,7 +140,7 @@ export default function ZoneCreatePage() {
     )
   }
 
-  if (!farm) {
+  if (!activeFarm) {
     return (
       <div className="max-w-md mx-auto mt-20 text-center p-8 bg-white rounded-2xl border border-slate-200 shadow-sm">
         <div className="text-4xl mb-4">🚜</div>
@@ -236,6 +247,29 @@ export default function ZoneCreatePage() {
                 className="w-full rounded-xl border border-slate-200 p-3 text-sm focus:border-green-500 focus:ring-2 focus:ring-green-200"
               />
             </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                Crop Type
+              </label>
+              <select
+                name="crop_type_id"
+                value={form.crop_type_id}
+                onChange={handleChange}
+                className="w-full rounded-xl border border-slate-200 p-3 text-sm focus:border-green-500 focus:ring-2 focus:ring-green-200"
+              >
+                <option value="">Select crop type</option>
+                {cropTypes.map((crop) => (
+                  <option key={crop.id} value={crop.id}>
+                    {crop.name_en ?? "Unnamed crop"}
+                  </option>
+                ))}
+              </select>
+              {selectedCropType?.default_unit ? (
+                <p className="text-xs text-slate-400 mt-1">
+                  Default unit: {selectedCropType.default_unit}
+                </p>
+              ) : null}
+            </div>
 
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
               {pointsCount
@@ -264,7 +298,7 @@ export default function ZoneCreatePage() {
               onBoundaryChange={setBoundary}
               onAreaChange={handleAreaChange}
               limitBoundary={
-                Array.isArray(farm?.boundary) ? farm.boundary : []
+                Array.isArray(activeFarm?.boundary) ? activeFarm.boundary : []
               }
               occupiedBoundaries={occupiedBoundaries}
               showLocate={false}
@@ -278,6 +312,14 @@ export default function ZoneCreatePage() {
         open={toast.open}
         message={toast.message}
         onClose={() => setToast((prev) => ({ ...prev, open: false }))}
+      />
+      <ConfirmModal
+        open={confirmOpen}
+        title="Create zone?"
+        message="This will save the zone and its boundary."
+        confirmLabel="Create"
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={handleConfirmCreate}
       />
     </div>
   )

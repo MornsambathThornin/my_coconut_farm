@@ -9,6 +9,8 @@ type Props = {
   message: string
   tone?: ToastTone
   durationMs?: number
+  actionLabel?: string
+  onAction?: () => void
   onClose: () => void
 }
 
@@ -17,6 +19,8 @@ export default function Toast({
   message,
   tone = 'success',
   durationMs = 2400,
+  actionLabel,
+  onAction,
   onClose,
 }: Props) {
   useEffect(() => {
@@ -37,7 +41,21 @@ export default function Toast({
   return (
     <div className="fixed bottom-6 right-6 z-50 max-w-xs">
       <div className={`rounded-xl px-4 py-3 text-sm font-semibold shadow-lg ${toneStyles}`}>
-        {message}
+        <div className="flex items-center gap-3">
+          <span className="flex-1">{message}</span>
+          {actionLabel && onAction && (
+            <button
+              type="button"
+              onClick={() => {
+                onAction()
+                onClose()
+              }}
+              className="text-xs font-bold uppercase tracking-wide underline"
+            >
+              {actionLabel}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   )

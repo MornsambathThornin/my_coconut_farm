@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { format } from "date-fns";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/utils/supabase/client";
@@ -9,6 +10,7 @@ import { useAuthUser } from "@/lib/useAuthUser";
 import HarvestForm from "@/components/forms/HarvestForm";
 import IrrigationForm from "@/components/forms/IrrigationForm";
 import ProductionChart from "@/components/charts/ProductionChart";
+import ForecastChart from "@/components/charts/ForecastChart";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import ErrorModal from "@/components/ui/ErrorModal";
 import Toast from "@/components/ui/Toast";
@@ -16,10 +18,42 @@ import FormDialog from "@/components/ui/FormDialog";
 import ZoneMap from "@/components/maps/ZoneMap";
 import ZoneDrawMap from "@/components/maps/ZoneDrawMap";
 import {
-  calculateYieldPerTree,
+  calculateYieldPerHectare,
   groupHarvestByMonth,
   sumHarvestQuantity,
+  type Harvest,
 } from "@/lib/helpers";
+import { useTranslations } from "@/lib/useTranslations";
+import type { CropType, Zone } from "@/types/db";
+
+type ForecastRow = {
+  forecast_month: string | null;
+  expected_yield_kg_per_ha: number | null;
+  confidence_score: number | null;
+};
+
+type ZoneHarvest = Harvest & { id: string };
+
+type FarmBoundary = {
+  id: string;
+  name: string;
+  boundary?: [number, number][] | null;
+};
+
+type IrrigationLog = {
+  id: string;
+  irrigation_date: string;
+  method: string | null;
+  notes: string | null;
+};
+
+type PlantationBatch = {
+  id: string;
+  planting_year: number | null;
+  variety: string | null;
+  tree_count: number | null;
+  notes: string | null;
+};
 
 import { 
   ChevronLeft, 
@@ -38,14 +72,15 @@ export default function ZoneDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("overview");
-  const [zone, setZone] = useState<any>(null);
-  const [farm, setFarm] = useState<any>(null);
-  const [harvests, setHarvests] = useState<any[]>([]);
-  const [irrigations, setIrrigations] = useState<any[]>([]);
-  const [batches, setBatches] = useState<any[]>([]);
+  const [zone, setZone] = useState<Zone | null>(null);
+  const [farm, setFarm] = useState<FarmBoundary | null>(null);
+  const [harvests, setHarvests] = useState<ZoneHarvest[]>([]);
+  const [irrigations, setIrrigations] = useState<IrrigationLog[]>([]);
+  const [batches, setBatches] = useState<PlantationBatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user, loading: authLoading } = useAuthUser();
+  const { t } = useTranslations();
   const [batchForm, setBatchForm] = useState({ planting_year: "", variety: "", tree_count: "", notes: "" });
   const [batchSaving, setBatchSaving] = useState(false);
   const [batchConfirmOpen, setBatchConfirmOpen] = useState(false);
@@ -57,7 +92,6 @@ export default function ZoneDetailPage() {
   const [batchFormOpen, setBatchFormOpen] = useState(false);
   const [harvestFormOpen, setHarvestFormOpen] = useState(false);
   const [irrigationFormOpen, setIrrigationFormOpen] = useState(false);
-  const lastBatchSync = useRef<string | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteToast, setDeleteToast] = useState({ open: false, message: "" });
@@ -76,28 +110,31 @@ export default function ZoneDetailPage() {
   const [occupiedBoundaries, setOccupiedBoundaries] = useState<
     [number, number][][]
   >([]);
+  const [cropTypes, setCropTypes] = useState<CropType[]>([]);
+  const [forecasts, setForecasts] = useState<ForecastRow[]>([]);
   const [editForm, setEditForm] = useState({
     name: "",
     area_ha: "",
     tree_count: "",
     avg_tree_age_years: "",
     variety: "",
+    crop_type_id: "",
   });
 
   // --- DATA FETCHING ---
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!id || !user) return;
     try {
       const { data: zoneData, error: zoneError } = await supabase
         .from("zones")
-        .select("*")
+        .select("*, crop_type:crop_types(id, name_en, default_unit)")
         .eq("id", id)
         .eq("user_id", user.id)
         .single();
 
       if (zoneError) throw zoneError;
 
-      const [h, i, b, f, z] = await Promise.all([
+      const [h, i, b, f, z, c, fc] = await Promise.all([
         supabase
           .from("harvests")
           .select("*")
@@ -127,6 +164,16 @@ export default function ZoneDetailPage() {
           .select("id, boundary")
           .eq("farm_id", zoneData.farm_id)
           .eq("user_id", user.id),
+        fetch("/api/crop-types").then(async (res) => {
+          if (!res.ok) return { data: [] as CropType[] }
+          const payload = await res.json()
+          return { data: (payload || []) as CropType[] }
+        }),
+        supabase
+          .from("yield_forecasts")
+          .select("forecast_month, expected_yield_kg_per_ha, confidence_score")
+          .eq("zone_id", id)
+          .order("forecast_month", { ascending: true }),
       ]);
 
       setZone(zoneData);
@@ -143,14 +190,22 @@ export default function ZoneDetailPage() {
               Array.isArray(bnd) && bnd.length > 2
           ) || [];
       setOccupiedBoundaries(boundaries);
-    } catch (err: any) {
-      setError(err.message);
+      setCropTypes((c as { data?: CropType[] }).data || []);
+      setForecasts(fc.data || []);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unable to load zone data."
+      setError(message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, user]);
 
-  useEffect(() => { if (!authLoading) fetchData(); }, [authLoading, id, user]);
+  useEffect(() => {
+    if (!authLoading) {
+      fetchData();
+    }
+  }, [authLoading, fetchData]);
 
   // --- CALCULATIONS ---
   const chartData = useMemo(() => groupHarvestByMonth(harvests), [harvests]);
@@ -165,7 +220,24 @@ export default function ZoneDetailPage() {
   }, [zone, batches]);
 
   const displayZone = derivedZone ?? zone;
-  const yieldPerTree = calculateYieldPerTree(totalHarvestQuantity, displayZone?.tree_count ?? null);
+  const zoneArea = displayZone?.area_ha ?? null;
+  const yieldPerHa = useMemo(
+    () => calculateYieldPerHectare(totalHarvestQuantity, zoneArea),
+    [totalHarvestQuantity, zoneArea],
+  );
+  const harvestUnit = harvests[0]?.unit || "kg";
+  const forecastChartData = useMemo(
+    () =>
+      forecasts
+        .filter((row) => row.forecast_month)
+        .map((row) => ({
+          month: format(new Date(row.forecast_month!), "MMM yyyy"),
+          expectedYield: Number(row.expected_yield_kg_per_ha ?? 0),
+          confidence: Number(row.confidence_score ?? 0),
+        })),
+    [forecasts],
+  );
+  const latestForecast = forecastChartData.at(-1);
 
   const handleBatchChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -203,14 +275,19 @@ export default function ZoneDetailPage() {
   const handleBatchConfirm = async () => {
     setBatchConfirmOpen(false);
     setBatchSaving(true);
-    const { error } = await supabase.from("plantation_batches").insert({
-      user_id: user?.id, zone_id: id,
-      planting_year: Number(batchForm.planting_year),
-      variety: batchForm.variety,
-      tree_count: Number(batchForm.tree_count),
-      notes: batchForm.notes
-    });
-    if (!error) {
+    const res = await fetch('/api/plantation-batches', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        zone_id: id,
+        planting_year: batchForm.planting_year ? Number(batchForm.planting_year) : null,
+        variety: batchForm.variety || null,
+        tree_count: batchForm.tree_count ? Number(batchForm.tree_count) : null,
+        notes: batchForm.notes || null,
+      })
+    })
+    const payload = await res.json()
+    if (res.ok) {
       setBatchToast({
         open: true,
         message: "Planting batch saved."
@@ -221,18 +298,25 @@ export default function ZoneDetailPage() {
     } else {
       setBatchError({
         open: true,
-        message: error.message
+        message: payload?.error || 'Unable to save planting batch'
       });
     }
     setBatchSaving(false);
   };
 
   const handleEditChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
   ) => {
     const { name, value } = e.target;
     setEditForm((prev) => ({ ...prev, [name]: value }));
   };
+
+  const selectedEditCropType = useMemo(
+    () => cropTypes.find((crop) => crop.id === editForm.crop_type_id),
+    [cropTypes, editForm.crop_type_id],
+  );
 
   const handleEditAreaChange = useCallback((areaHa: number) => {
     const next = Number.isFinite(areaHa) ? areaHa.toFixed(2) : "";
@@ -251,9 +335,10 @@ export default function ZoneDetailPage() {
     }
 
     setEditSaving(true);
-    const { error: updateError } = await supabase
-      .from("zones")
-      .update({
+    const res = await fetch(`/api/zones/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         name: editForm.name,
         area_ha: editForm.area_ha ? Number(editForm.area_ha) : null,
         tree_count: editForm.tree_count ? Number(editForm.tree_count) : null,
@@ -261,15 +346,16 @@ export default function ZoneDetailPage() {
           ? Number(editForm.avg_tree_age_years)
           : null,
         variety: editForm.variety || null,
+        crop_type_id: editForm.crop_type_id || null,
         boundary: editBoundary,
-      })
-      .eq("id", id)
-      .eq("user_id", user.id);
+      }),
+    })
 
-    if (updateError) {
+    const payload = await res.json()
+    if (!res.ok) {
       setEditError({
         open: true,
-        message: updateError.message,
+        message: payload?.error || 'Unable to update zone',
       });
       setEditSaving(false);
       return;
@@ -292,6 +378,7 @@ export default function ZoneDetailPage() {
           ? String(displayZone.avg_tree_age_years)
           : "",
       variety: displayZone.variety ?? "",
+      crop_type_id: displayZone.crop_type_id ?? "",
     });
     setEditBoundary(
       Array.isArray(displayZone.boundary) ? displayZone.boundary : []
@@ -302,15 +389,12 @@ export default function ZoneDetailPage() {
     if (!user || !id || deleteLoading) return;
     setDeleteConfirmOpen(false);
     setDeleteLoading(true);
-    const { error: deleteError } = await supabase
-      .from("zones")
-      .delete()
-      .eq("id", id)
-      .eq("user_id", user.id);
-    if (deleteError) {
+    const res = await fetch(`/api/zones/${id}`, { method: 'DELETE' })
+    const payload = await res.json()
+    if (!res.ok) {
       setDeleteError({
         open: true,
-        message: deleteError.message,
+        message: payload?.error || 'Unable to delete zone',
       });
       setDeleteLoading(false);
       return;
@@ -356,20 +440,42 @@ export default function ZoneDetailPage() {
         <div className="flex flex-col md:flex-row justify-between gap-8">
           <div className="space-y-4">
             <div>
-              <h1 className="text-4xl font-black text-slate-900 tracking-tight">Zone {displayZone.name}</h1>
-              <p className="text-slate-500 mt-1 flex items-center gap-2">
-                <Sprout className="w-4 h-4 text-green-500" />
-                Variety: <span className="font-semibold text-slate-700">{displayZone.variety || "Mixed"}</span>
+              <h1 className="text-4xl font-black text-slate-900 tracking-tight">
+                {t("zone.title")} {displayZone?.name}
+              </h1>
+              <p className="text-slate-500 mt-1 flex flex-col gap-2">
+                <span className="flex items-center gap-2">
+                  <Sprout className="w-4 h-4 text-green-500" />
+                  {t("zone.variety")}:{" "}
+                  <span className="font-semibold text-slate-700">
+                    {displayZone?.variety ||
+                      displayZone?.crop_type?.name_en ||
+                      "Mixed"}
+                  </span>
+                </span>
+                {displayZone?.crop_type?.name_en ? (
+                  <span className="text-xs uppercase tracking-[0.2em] text-slate-400">
+                    {t("zone.cropType")}: {displayZone.crop_type.name_en}
+                  </span>
+                ) : null}
               </p>
             </div>
             <div className="grid grid-cols-2 gap-4 pt-2">
               <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Area</p>
-                <p className="text-lg font-bold text-slate-900">{displayZone.area_ha ?? "-"} ha</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  {t("zone.totalArea")}
+                </p>
+                <p className="text-lg font-bold text-slate-900">
+                  {displayZone?.area_ha ?? "-"} ha
+                </p>
               </div>
               <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Avg Tree Age</p>
-                <p className="text-lg font-bold text-slate-900">{displayZone.avg_tree_age_years ?? "-"} yrs</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  {t("zone.avgTreeAge")}
+                </p>
+                <p className="text-lg font-bold text-slate-900">
+                  {displayZone?.avg_tree_age_years ?? "-"} yrs
+                </p>
               </div>
             </div>
           </div>
@@ -377,15 +483,26 @@ export default function ZoneDetailPage() {
           {/* Efficiency Card */}
           <div className="bg-gradient-to-br from-green-600 to-emerald-700 rounded-3xl p-6 text-white shadow-lg shadow-green-200 flex flex-col justify-between min-w-[280px]">
             <div className="flex justify-between items-start">
-              <div className="p-2 bg-white/10 rounded-lg"><TrendingUp className="w-5 h-5 text-white" /></div>
-              <p className="text-[10px] font-bold uppercase tracking-widest opacity-80">Efficiency Rating</p>
+              <div className="p-2 bg-white/10 rounded-lg">
+                <TrendingUp className="w-5 h-5 text-white" />
+              </div>
+              <p className="text-[10px] font-bold uppercase tracking-widest opacity-80">
+                {t("zone.efficiency")}
+              </p>
             </div>
             <div className="my-4">
-              <h2 className="text-5xl font-black tracking-tighter">{displayZone.tree_count ? yieldPerTree.toFixed(2) : "0.00"}</h2>
-              <p className="text-sm font-medium opacity-90">units per tree</p>
+              <h2 className="text-5xl font-black tracking-tighter">
+                {yieldPerHa ? yieldPerHa.toFixed(1) : "0.0"}
+              </h2>
+              <p className="text-sm font-medium opacity-90">
+                {harvestUnit}/ha
+              </p>
             </div>
             <div className="pt-4 border-t border-white/10 text-xs">
-              Total Production: <span className="font-bold">{totalHarvestQuantity.toLocaleString()} {harvests[0]?.unit || "units"}</span>
+              Total Production:{" "}
+              <span className="font-bold">
+                {totalHarvestQuantity.toLocaleString()} {harvestUnit}
+              </span>
             </div>
           </div>
         </div>
@@ -394,10 +511,10 @@ export default function ZoneDetailPage() {
       {/* Modern Tabs */}
       <div className="flex gap-1 bg-slate-200/50 p-1 rounded-xl w-full md:w-fit mx-2">
         {[
-          { id: "overview", label: "Analysis", icon: Activity },
-          { id: "harvest", label: "Harvest", icon: Grape },
-          { id: "irrigation", label: "Irrigation", icon: Droplets },
-          { id: "batches", label: "Batches", icon: Calendar }
+          { id: "overview", label: t("zone.tabs.analysis"), icon: Activity },
+          { id: "harvest", label: t("zone.tabs.harvest"), icon: Grape },
+          { id: "irrigation", label: t("zone.tabs.irrigation"), icon: Droplets },
+          { id: "batches", label: t("zone.tabs.batches"), icon: Calendar },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -430,6 +547,41 @@ export default function ZoneDetailPage() {
                   <ProductionChart data={chartData} />
                 )}
               </div>
+            </div>
+            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-fuchsia-500" />
+                  Seasonal Forecast
+                </h3>
+                <span className="text-xs uppercase tracking-[0.3em] text-slate-400">
+                  SMA v1
+                </span>
+              </div>
+              <p className="text-xs text-slate-500">
+                Projected kg/ha based on the latest Khmer-focused seasonal model.
+              </p>
+              <div className="h-[260px] w-full">
+                {forecastChartData.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-100 rounded-2xl">
+                    <Info className="w-8 h-8 mb-2 opacity-20" />
+                    <p className="text-sm">Forecast not available yet.</p>
+                  </div>
+                ) : (
+                  <ForecastChart data={forecastChartData} />
+                )}
+              </div>
+              {latestForecast && (
+                <p className="text-xs text-slate-500">
+                  Latest ({latestForecast.month}): expected{" "}
+                  <strong>{latestForecast.expectedYield.toFixed(1)} kg/ha</strong>{" "}
+                  at{" "}
+                  <strong>
+                    {(latestForecast.confidence * 100).toFixed(0)}%
+                  </strong>{" "}
+                  confidence.
+                </p>
+              )}
             </div>
             <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
               <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
@@ -482,7 +634,9 @@ export default function ZoneDetailPage() {
                   <tbody className="divide-y divide-slate-100">
                     {harvests.map((h) => (
                       <tr key={h.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="p-4 font-semibold text-slate-700">{h.harvest_date}</td>
+                        <td className="p-4 font-semibold text-slate-700">
+                          {format(new Date(h.harvest_date), "PP")}
+                        </td>
                         <td className="p-4">{h.quantity} {h.unit}</td>
                         <td className="p-4"><span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-tighter">{h.quality_grade || "N/A"}</span></td>
                         <td className="p-4 text-slate-400 text-xs italic truncate max-w-[150px]">{h.notes || "-"}</td>
@@ -499,6 +653,7 @@ export default function ZoneDetailPage() {
             >
               <HarvestForm
                 zoneId={id!}
+                farmId={farm?.id ?? undefined}
                 onSuccess={() => {
                   if (user) fetchHarvests(id!, user.id);
                   setHarvestFormOpen(false);
@@ -549,6 +704,7 @@ export default function ZoneDetailPage() {
             >
               <IrrigationForm
                 zoneId={id!}
+                farmId={farm?.id ?? undefined}
                 onSuccess={() => {
                   if (user) fetchIrrigations(id!, user.id);
                   setIrrigationFormOpen(false);
@@ -563,18 +719,22 @@ export default function ZoneDetailPage() {
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 animate-in fade-in duration-300">
             <div className="lg:col-span-2">
               <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
-                <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><PlusCircle className="w-5 h-5 text-green-600" /> New Planting Batch</h3>
+                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                  <PlusCircle className="w-5 h-5 text-green-600" /> {t("zone.batch-action")}
+                </h3>
                 <button
                   type="button"
                   onClick={() => setBatchFormOpen(true)}
                   className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-slate-800 transition-all shadow-lg"
                 >
-                  Add Planting Batch
+                  {t("zone.batch-action")}
                 </button>
               </div>
             </div>
             <div className="lg:col-span-3 bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
-               <div className="p-4 border-b border-slate-100 font-bold text-xs uppercase tracking-widest text-slate-500">Planting Batches History</div>
+               <div className="p-4 border-b border-slate-100 font-bold text-xs uppercase tracking-widest text-slate-500">
+                 {t("zone.batch-title")}
+               </div>
                <div className="overflow-x-auto">
                  <table className="w-full text-sm text-left">
                    <thead className="bg-slate-50/50">
@@ -595,7 +755,7 @@ export default function ZoneDetailPage() {
             </div>
             <FormDialog
               open={batchFormOpen}
-              title="New Planting Batch"
+              title={t("zone.batch-action")}
               onClose={() => setBatchFormOpen(false)}
             >
               <form onSubmit={handleBatchSubmit} className="space-y-4">
@@ -707,6 +867,29 @@ export default function ZoneDetailPage() {
                 className="w-full rounded-xl border border-slate-200 p-3 text-sm focus:border-green-500 focus:ring-2 focus:ring-green-200"
               />
             </div>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+              Crop Type
+            </label>
+            <select
+              name="crop_type_id"
+              value={editForm.crop_type_id}
+              onChange={handleEditChange}
+              className="w-full rounded-xl border border-slate-200 p-3 text-sm focus:border-green-500 focus:ring-2 focus:ring-green-200"
+            >
+              <option value="">Select crop type</option>
+              {cropTypes.map((crop) => (
+                <option key={crop.id} value={crop.id}>
+                  {crop.name_en ?? "Unnamed crop"}
+                </option>
+              ))}
+            </select>
+            {selectedEditCropType?.default_unit ? (
+              <p className="text-xs text-slate-400 mt-1">
+                Default unit: {selectedEditCropType.default_unit}
+              </p>
+            ) : null}
           </div>
           <div className="h-[320px] w-full rounded-2xl border border-slate-200 overflow-hidden">
             <ZoneDrawMap

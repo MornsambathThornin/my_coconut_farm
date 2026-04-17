@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/utils/supabase/client'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import ErrorModal from '@/components/ui/ErrorModal'
 import Toast from '@/components/ui/Toast'
+import { useFarmContext } from '@/context/FarmContext'
 
 type Zone = {
   id: string
@@ -13,10 +14,11 @@ type Zone = {
 
 type Props = {
   zoneId?: string
+  farmId?: string
   onSuccess?: () => void
 }
 
-export default function IrrigationForm({ zoneId, onSuccess }: Props) {
+export default function IrrigationForm({ zoneId, farmId, onSuccess }: Props) {
   const today = new Date().toISOString().split('T')[0]
   const [zones, setZones] = useState<Zone[]>([])
   const [form, setForm] = useState({
@@ -35,20 +37,36 @@ export default function IrrigationForm({ zoneId, onSuccess }: Props) {
     message: '',
   })
 
+  const validation = useMemo(() => {
+    const errors: Record<string, string> = {}
+    if (!form.zone_id) errors.zone_id = 'Zone is required.'
+    if (!form.irrigation_date) errors.irrigation_date = 'Irrigation date is required.'
+    if (form.irrigation_date && form.irrigation_date > today) errors.irrigation_date = 'Irrigation date cannot be in the future.'
+    if (form.duration_minutes) {
+      const duration = Number(form.duration_minutes)
+      if (Number.isNaN(duration) || duration < 0) errors.duration_minutes = 'Duration must be positive.'
+    }
+    return errors
+  }, [form, today])
+
+  const { activeFarm } = useFarmContext()
+  const resolvedFarmId = farmId ?? activeFarm?.id
+
   useEffect(() => {
-    if (zoneId) return
+    if (zoneId || !resolvedFarmId) return
 
     const fetchZones = async () => {
       const { data } = await supabase
         .from('zones')
         .select('id, name')
+        .eq('farm_id', resolvedFarmId)
         .order('name')
 
       setZones(data || [])
     }
 
     fetchZones()
-  }, [zoneId])
+  }, [zoneId, resolvedFarmId])
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -59,74 +77,48 @@ export default function IrrigationForm({ zoneId, onSuccess }: Props) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (loading) return
+    if (Object.keys(validation).length > 0) {
+      setErrorModal({ open: true, message: Object.values(validation)[0] })
+      return
+    }
     setConfirmOpen(true)
   }
 
   const handleConfirmSubmit = async () => {
     setConfirmOpen(false)
     setLoading(true)
-
-    if (form.irrigation_date && form.irrigation_date > today) {
+    if (!resolvedFarmId) {
       setLoading(false)
       setErrorModal({
         open: true,
-        message: 'Irrigation date cannot be in the future.',
+        message: 'No farm selected for this log.',
       })
       return
     }
-
-    // const { data: userData, error: userError } =
-    //   await supabase.auth.getUser()
-
-    // if (userError || !userData.user) {
-    //   setLoading(false)
-    //   alert('You must be signed in to add an irrigation log.')
-    //   return
-    // }
-
-    // const { error } = await supabase.from('irrigation_logs').insert([
-    //   {
-    //     user_id: userData.user.id,
-    //     zone_id: form.zone_id,
-    //     irrigation_date: form.irrigation_date,
-    //     method: form.method,
-    //     duration_minutes: form.duration_minutes
-    //       ? Number(form.duration_minutes)
-    //       : null,
-    //     water_source: form.water_source,
-    //     notes: form.notes,
-    //   },
-    // ])
-
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-
-    if (userError || !user) {
-     setLoading(false)
-     setErrorModal({
-       open: true,
-       message: 'Please log in to add an irrigation log.',
-     })
-     return
-   }
-
-    const { error } = await supabase.from('irrigation_logs').insert([
+    const res = await fetch(
+      `/api/irrigation-logs?farm_id=${encodeURIComponent(resolvedFarmId)}`,
       {
-        user_id: user?.id,
+        method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         zone_id: form.zone_id,
         irrigation_date: form.irrigation_date,
-        method: form.method,
-        duration_minutes: form.duration_minutes
-          ? Number(form.duration_minutes)
-          : null,
-        water_source: form.water_source,
-        notes: form.notes,
-      },
-    ])
+        method: form.method || null,
+        duration_minutes: form.duration_minutes ? Number(form.duration_minutes) : null,
+        water_source: form.water_source || null,
+        notes: form.notes || null,
+      }),
+    })
 
-
+    const payload = await res.json()
     setLoading(false)
 
-    if (!error) {
+    if (!res.ok) {
+      setErrorModal({ open: true, message: payload?.error || 'Unable to save irrigation log.' })
+      return
+    }
+
+    if (payload) {
       setForm({
         zone_id: zoneId || '',
         irrigation_date: '',
@@ -137,11 +129,6 @@ export default function IrrigationForm({ zoneId, onSuccess }: Props) {
       })
       setToast({ open: true, message: 'Irrigation log saved.' })
       onSuccess?.()
-    } else {
-      setErrorModal({
-        open: true,
-        message: error.message,
-      })
     }
   }
 

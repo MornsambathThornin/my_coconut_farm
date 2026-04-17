@@ -8,18 +8,12 @@ import { useAuthUser } from "@/lib/useAuthUser";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import ErrorModal from "@/components/ui/ErrorModal";
 import Toast from "@/components/ui/Toast";
+import FarmCreateForm from "@/components/FarmCreateForm";
+import { useFarmContext } from "@/context/FarmContext";
 
 type Profile = {
   id: string;
   full_name: string | null;
-};
-
-type Farm = {
-  id: string;
-  name: string;
-  location: string | null;
-  total_area_ha: number | null;
-  notes: string | null;
 };
 
 type AccountInfo = {
@@ -31,7 +25,6 @@ export default function ProfilePage() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [email, setEmail] = useState("");
-  const [farm, setFarm] = useState<Farm | null>(null);
   const [accountInfo, setAccountInfo] = useState<AccountInfo>({
     createdAt: null,
     lastSignInAt: null,
@@ -49,6 +42,7 @@ export default function ProfilePage() {
     message: "",
   });
   const { user, loading: authLoading } = useAuthUser();
+  const { activeFarm } = useFarmContext();
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -87,64 +81,6 @@ export default function ProfilePage() {
         lastSignInAt: userData.user?.last_sign_in_at || null,
       });
 
-      const { data: farmData, error: farmError } = await supabase
-        .from("farms")
-        .select("id, name, location, total_area_ha, notes")
-        .eq("user_id", user.id)
-        .limit(1)
-        .maybeSingle();
-
-      if (farmError) {
-        setErrorModal({ open: true, message: farmError.message });
-        setLoading(false);
-        return;
-      }
-
-      setFarm(farmData || null);
-
-      if (farmData) {
-        const [
-          { data: zonesData, error: zonesError },
-          { data: harvestData, error: harvestError },
-        ] = await Promise.all([
-          supabase
-            .from("zones")
-            .select("tree_count")
-            .eq("user_id", user.id)
-            .eq("farm_id", farmData.id),
-          supabase
-            .from("harvests")
-            .select("harvest_date")
-            .eq("user_id", user.id)
-            .order("harvest_date", { ascending: false }),
-        ]);
-
-        if (zonesError || harvestError) {
-          setErrorModal({
-            open: true,
-            message: zonesError?.message || harvestError?.message || "",
-          });
-          setLoading(false);
-          return;
-        }
-
-        const zoneList = zonesData || [];
-        const treeTotal = zoneList.reduce(
-          (sum, z) => sum + Number(z.tree_count || 0),
-          0,
-        );
-
-        setZonesCount(zoneList.length);
-        setTotalTrees(treeTotal);
-        setHarvestCount(harvestData?.length || 0);
-        setLastHarvestDate(harvestData?.[0]?.harvest_date || null);
-      } else {
-        setZonesCount(0);
-        setTotalTrees(0);
-        setHarvestCount(0);
-        setLastHarvestDate(null);
-      }
-
       setLoading(false);
     };
 
@@ -158,9 +94,77 @@ export default function ProfilePage() {
     }
   }, [authLoading, router, user]);
 
+  useEffect(() => {
+    const loadFarmMetrics = async () => {
+      if (authLoading) return;
+      if (!user || !activeFarm) {
+        setZonesCount(0);
+        setTotalTrees(0);
+        setHarvestCount(0);
+        setLastHarvestDate(null);
+        return;
+      }
+
+      const { data: zonesData, error: zonesError } = await supabase
+        .from("zones")
+        .select("id, tree_count")
+        .eq("user_id", user.id)
+        .eq("farm_id", activeFarm.id);
+
+      if (zonesError) {
+        setErrorModal({
+          open: true,
+          message: zonesError.message,
+        });
+        return;
+      }
+
+      const zoneList = zonesData || [];
+      const zoneIds = zoneList.map((z) => z.id);
+
+      const harvestsData =
+        zoneIds.length > 0
+          ? await supabase
+              .from("harvests")
+              .select("harvest_date")
+              .eq("user_id", user.id)
+              .in("zone_id", zoneIds)
+              .order("harvest_date", { ascending: false })
+          : { data: [], error: null };
+
+      if (harvestsData.error) {
+        setErrorModal({
+          open: true,
+          message: harvestsData.error.message,
+        });
+        return;
+      }
+
+      const totalTrees = zoneList.reduce(
+        (sum, z) => sum + Number(z.tree_count || 0),
+        0
+      );
+
+      setZonesCount(zoneList.length);
+      setTotalTrees(totalTrees);
+      setHarvestCount(harvestsData.data?.length || 0);
+      setLastHarvestDate(harvestsData.data?.[0]?.harvest_date || null);
+    };
+
+    loadFarmMetrics();
+  }, [activeFarm, user, authLoading]);
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (saving) return;
+    if (!profile?.full_name?.trim()) {
+      setErrorModal({ open: true, message: "Full name is required." });
+      return;
+    }
+    if (profile.full_name.trim().length > 100) {
+      setErrorModal({ open: true, message: "Full name is too long." });
+      return;
+    }
     setConfirmOpen(true);
   };
 
@@ -258,18 +262,18 @@ export default function ProfilePage() {
           <h3 className="text-sm font-bold uppercase tracking-widest text-slate-500">
             Farm Overview
           </h3>
-          {farm ? (
+          {activeFarm ? (
             <div className="mt-4 space-y-3 text-sm text-slate-600">
               <div>
                 <p className="text-xs font-semibold text-slate-400">
                   Farm Name
                 </p>
-                <p className="font-medium text-slate-900">{farm.name}</p>
+                <p className="font-medium text-slate-900">{activeFarm.name}</p>
               </div>
               <div>
                 <p className="text-xs font-semibold text-slate-400">Location</p>
                 <p className="font-medium text-slate-900">
-                  {farm.location || "Not set"}
+                  {activeFarm.location || "Not set"}
                 </p>
               </div>
               <div>
@@ -277,18 +281,18 @@ export default function ProfilePage() {
                   Total Area
                 </p>
                 <p className="font-medium text-slate-900">
-                  {farm.total_area_ha ?? "-"} ha
+                  {activeFarm.total_area_ha ?? "-"} ha
                 </p>
               </div>
               <div>
                 <p className="text-xs font-semibold text-slate-400">Notes</p>
                 <p className="font-medium text-slate-900">
-                  {farm.notes || "No notes"}
+                  {activeFarm.notes || "No notes"}
                 </p>
               </div>
               <div className="pt-2">
                 <Link
-                  href="/dashboard/farm/edit"
+                  href={`/dashboard/farm/${activeFarm.id}/edit`}
                   className="inline-flex items-center justify-center px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-widest bg-slate-900 text-white hover:bg-slate-800"
                 >
                   Edit Farm
@@ -296,9 +300,17 @@ export default function ProfilePage() {
               </div>
             </div>
           ) : (
-            <p className="mt-4 text-sm text-slate-500">
-              No farm linked yet. Create one from the dashboard.
-            </p>
+            <div className="mt-4 space-y-6">
+              <p className="text-sm text-slate-500">
+                No farm linked yet. Draw your farm boundary below to get started.
+              </p>
+              <FarmCreateForm
+                onSuccess={() => {
+                  setToast({ open: true, message: "Farm profile saved." })
+                  router.refresh()
+                }}
+              />
+            </div>
           )}
         </div>
 
