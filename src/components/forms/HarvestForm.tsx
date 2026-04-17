@@ -6,6 +6,7 @@ import ConfirmModal from '@/components/ui/ConfirmModal'
 import ErrorModal from '@/components/ui/ErrorModal'
 import Toast from '@/components/ui/Toast'
 import { useFarmContext } from '@/context/FarmContext'
+import { useTranslations } from '@/lib/useTranslations'
 
 type Zone = {
   id: string
@@ -26,6 +27,7 @@ type MetricRow = {
 }
 
 export default function HarvestForm({ zoneId, farmId, onSuccess }: Props) {
+  const { t } = useTranslations()
   const today = new Date().toISOString().split('T')[0]
   const [zones, setZones] = useState<Zone[]>([])
   const [form, setForm] = useState({
@@ -48,13 +50,13 @@ export default function HarvestForm({ zoneId, farmId, onSuccess }: Props) {
 
   const validation = useMemo(() => {
     const errors: Record<string, string> = {}
-    if (!form.zone_id) errors.zone_id = 'Zone is required.'
-    if (!form.harvest_date) errors.harvest_date = 'Harvest date is required.'
-    if (form.harvest_date && form.harvest_date > today) errors.harvest_date = 'Harvest date cannot be in the future.'
+    if (!form.zone_id) errors.zone_id = t('harvestForm.errorZoneRequired')
+    if (!form.harvest_date) errors.harvest_date = t('harvestForm.errorDateRequired')
+    if (form.harvest_date && form.harvest_date > today) errors.harvest_date = t('harvestForm.errorDateFuture')
     const qty = Number(form.quantity)
-    if (!Number.isFinite(qty) || qty <= 0) errors.quantity = 'Quantity must be positive.'
+    if (!Number.isFinite(qty) || qty <= 0) errors.quantity = t('harvestForm.errorQuantity')
     return errors
-  }, [form, today])
+  }, [form, today, t])
 
   const { activeFarm } = useFarmContext()
   const resolvedFarmId = farmId ?? activeFarm?.id
@@ -101,8 +103,8 @@ export default function HarvestForm({ zoneId, farmId, onSuccess }: Props) {
     [prefilledZone, zones, form.zone_id],
   )
   const unitPlaceholder = selectedZone?.crop_type?.default_unit
-    ? `Unit (e.g. ${selectedZone.crop_type.default_unit})`
-    : 'Unit'
+    ? `${t('harvest.col.unit')} (e.g. ${selectedZone.crop_type.default_unit})`
+    : t('harvest.col.unit')
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -143,7 +145,7 @@ export default function HarvestForm({ zoneId, farmId, onSuccess }: Props) {
       setLoading(false)
       setErrorModal({
         open: true,
-        message: 'No farm selected for this harvest.',
+        message: t('harvestForm.errorNoFarm'),
       })
       return
     }
@@ -173,7 +175,7 @@ export default function HarvestForm({ zoneId, farmId, onSuccess }: Props) {
     setLoading(false)
 
     if (!res.ok) {
-      setErrorModal({ open: true, message: payload?.error || 'Unable to save harvest.' })
+      setErrorModal({ open: true, message: payload?.error || t('harvestForm.errorGeneric') })
       return
     }
 
@@ -187,7 +189,7 @@ export default function HarvestForm({ zoneId, farmId, onSuccess }: Props) {
         notes: '',
       })
       setMetrics([])
-      setToast({ open: true, message: 'Harvest record saved.' })
+      setToast({ open: true, message: t('harvestForm.savedToast') })
       onSuccess?.()
     }
   }
@@ -214,7 +216,7 @@ export default function HarvestForm({ zoneId, farmId, onSuccess }: Props) {
           required
           className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm focus:border-green-500 focus:ring-2 focus:ring-green-200"
         >
-          <option value="">Select Zone</option>
+          <option value="">{t('harvestForm.selectZone')}</option>
           {zones.map((z) => (
             <option key={z.id} value={z.id}>
               {z.name}
@@ -236,7 +238,7 @@ export default function HarvestForm({ zoneId, farmId, onSuccess }: Props) {
       <input
         type="number"
         name="quantity"
-        placeholder="Quantity"
+        placeholder={t('harvestForm.quantityPlaceholder')}
         value={form.quantity}
         onChange={handleChange}
         required
@@ -255,7 +257,7 @@ export default function HarvestForm({ zoneId, farmId, onSuccess }: Props) {
       <input
         type="text"
         name="quality_grade"
-        placeholder="Grade (A / B / Mixed)"
+        placeholder={t('harvestForm.gradePlaceholder')}
         value={form.quality_grade}
         onChange={handleChange}
         className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm focus:border-green-500 focus:ring-2 focus:ring-green-200"
@@ -263,7 +265,7 @@ export default function HarvestForm({ zoneId, farmId, onSuccess }: Props) {
 
       <textarea
         name="notes"
-        placeholder="Notes"
+        placeholder={t('harvestForm.notesPlaceholder')}
         value={form.notes}
         onChange={handleChange}
         className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm focus:border-green-500 focus:ring-2 focus:ring-green-200"
@@ -271,31 +273,31 @@ export default function HarvestForm({ zoneId, farmId, onSuccess }: Props) {
 
       <div className="rounded-xl border border-slate-200 p-3 space-y-3">
         <div className="flex items-center justify-between">
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Quality Metrics</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-500">{t('harvestForm.metricsTitle')}</p>
           <button
             type="button"
             onClick={addMetric}
             className="text-xs font-semibold text-green-700 hover:underline"
           >
-            + Add Metric
+            {t('harvestForm.addMetric')}
           </button>
         </div>
         {metrics.length === 0 ? (
-          <p className="text-xs text-slate-400">No quality metrics added.</p>
+          <p className="text-xs text-slate-400">{t('harvestForm.noMetrics')}</p>
         ) : (
           <div className="space-y-2">
             {metrics.map((metric, index) => (
               <div key={index} className="grid grid-cols-3 gap-2">
                 <input
                   type="text"
-                  placeholder="Metric name"
+                  placeholder={t('harvestForm.metricName')}
                   value={metric.metric_name}
                   onChange={(e) => updateMetric(index, 'metric_name', e.target.value)}
                   className="w-full rounded-lg border border-slate-200 p-2 text-xs"
                 />
                 <input
                   type="number"
-                  placeholder="Value"
+                  placeholder={t('harvestForm.metricValue')}
                   value={metric.metric_value}
                   onChange={(e) => updateMetric(index, 'metric_value', e.target.value)}
                   className="w-full rounded-lg border border-slate-200 p-2 text-xs"
@@ -303,7 +305,7 @@ export default function HarvestForm({ zoneId, farmId, onSuccess }: Props) {
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    placeholder="Unit"
+                    placeholder={t('harvestForm.metricUnit')}
                     value={metric.unit}
                     onChange={(e) => updateMetric(index, 'unit', e.target.value)}
                     className="w-full rounded-lg border border-slate-200 p-2 text-xs"
@@ -313,7 +315,7 @@ export default function HarvestForm({ zoneId, farmId, onSuccess }: Props) {
                     onClick={() => removeMetric(index)}
                     className="text-xs text-red-600 hover:underline"
                   >
-                    Remove
+                    {t('harvestForm.metricRemove')}
                   </button>
                 </div>
               </div>
@@ -327,19 +329,19 @@ export default function HarvestForm({ zoneId, farmId, onSuccess }: Props) {
         disabled={loading}
         className="w-full rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white hover:bg-green-700"
       >
-        {loading ? 'Saving...' : 'Add Harvest'}
+        {loading ? t('harvestForm.submitting') : t('harvestForm.submit')}
       </button>
       <ConfirmModal
         open={confirmOpen}
-        title="Add harvest record?"
-        message="This will save the harvest entry to the selected zone."
-        confirmLabel="Save"
+        title={t('harvestForm.confirmTitle')}
+        message={t('harvestForm.confirmMessage')}
+        confirmLabel={t('common.save')}
         onCancel={() => setConfirmOpen(false)}
         onConfirm={handleConfirmSubmit}
       />
       <ErrorModal
         open={errorModal.open}
-        title="Unable to save"
+        title={t('common.unableToSave')}
         message={errorModal.message}
         onClose={() =>
           setErrorModal((prev) => ({ ...prev, open: false }))

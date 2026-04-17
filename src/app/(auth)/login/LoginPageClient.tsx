@@ -6,9 +6,12 @@ import { useRouter } from 'next/navigation'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import ErrorModal from '@/components/ui/ErrorModal'
 import Toast from '@/components/ui/Toast'
+import LocaleSwitcher from '@/components/layout/LocaleSwitcher'
+import { useTranslations } from '@/lib/useTranslations'
 
 export default function LoginPageClient() {
   const router = useRouter()
+  const { t } = useTranslations()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -48,7 +51,7 @@ export default function LoginPageClient() {
     if (error) {
       setErrorModal({ open: true, message: error.message })
     } else {
-      setToast({ open: true, message: 'Signed in successfully.' })
+      setToast({ open: true, message: t('login.signedInToast') })
       setTimeout(() => {
         router.replace('/dashboard')
       }, 600)
@@ -61,24 +64,27 @@ export default function LoginPageClient() {
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <form
         onSubmit={handleLogin}
-        className="bg-white p-6 rounded-lg shadow w-96"
+        className="bg-white p-6 rounded-lg shadow w-96 space-y-4"
       >
-        <h1 className="text-2xl font-bold mb-4 text-center">
-          🌴 Farm Login
-        </h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-center flex-1">
+            🌴 {t('login.title')}
+          </h1>
+          <LocaleSwitcher variant="light" />
+        </div>
 
         <input
           type="email"
-          placeholder="Email"
-          className="w-full border p-2 rounded mb-3"
+          placeholder={t('login.emailPlaceholder')}
+          className="w-full border p-2 rounded"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
 
         <input
           type="password"
-          placeholder="Password"
-          className="w-full border p-2 rounded mb-4"
+          placeholder={t('login.passwordPlaceholder')}
+          className="w-full border p-2 rounded"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
@@ -88,19 +94,19 @@ export default function LoginPageClient() {
           disabled={loading}
           className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700"
         >
-          {loading ? 'Signing in...' : 'Login'}
+          {loading ? t('login.submitting') : t('login.submit')}
         </button>
         <ConfirmModal
           open={confirmOpen}
-          title="Sign in?"
-          message="Confirm you want to sign in with these credentials."
-          confirmLabel="Sign in"
+          title={t('login.confirmTitle')}
+          message={t('login.confirmMessage')}
+          confirmLabel={t('login.confirmLabel')}
           onCancel={() => setConfirmOpen(false)}
           onConfirm={handleConfirmLogin}
         />
         <ErrorModal
           open={errorModal.open}
-          title="Sign in failed"
+          title={t('login.errorTitle')}
           message={errorModal.message}
           onClose={() =>
             setErrorModal((prev) => ({ ...prev, open: false }))

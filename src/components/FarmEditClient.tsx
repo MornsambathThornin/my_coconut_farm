@@ -8,6 +8,7 @@ import ZoneDrawMap from '@/components/maps/ZoneDrawMap'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import ErrorModal from '@/components/ui/ErrorModal'
 import Toast from '@/components/ui/Toast'
+import { useTranslations } from '@/lib/useTranslations'
 
 type Farm = {
   id: string
@@ -21,6 +22,7 @@ type Farm = {
 export default function FarmEditClient({ initialFarm }: { initialFarm: Farm }) {
   const router = useRouter()
   const { user, loading: authLoading } = useAuthUser()
+  const { t } = useTranslations()
   const [farm, setFarm] = useState<Farm | null>(initialFarm ?? null)
   const [saving, setSaving] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -69,13 +71,13 @@ export default function FarmEditClient({ initialFarm }: { initialFarm: Farm }) {
 
       const payload = await res.json()
       if (!res.ok) {
-        throw new Error(payload?.error || 'Update failed')
+        throw new Error(payload?.error || t('farmEdit.updateFailed'))
       }
 
       setFarm(payload)
-      setToast({ open: true, message: 'Farm updated.' })
+      setToast({ open: true, message: t('farmEdit.updatedToast') })
     } catch (err: unknown) {
-      setErrorModal({ open: true, message: err instanceof Error ? err.message : 'Unable to save' })
+      setErrorModal({ open: true, message: err instanceof Error ? err.message : t('common.unableToSave') })
     } finally {
       setSaving(false)
     }
@@ -85,9 +87,9 @@ export default function FarmEditClient({ initialFarm }: { initialFarm: Farm }) {
     return (
       <div className="max-w-md mx-auto mt-20 text-center p-8 bg-white rounded-2xl border border-slate-200 shadow-sm">
         <div className="text-4xl mb-4">🚜</div>
-        <h2 className="text-xl font-bold text-slate-900">No Farm Found</h2>
-        <p className="text-slate-500 mt-2 mb-6">Create or select a farm first.</p>
-        <Link href="/dashboard" className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors">Go to Dashboard →</Link>
+        <h2 className="text-xl font-bold text-slate-900">{t('farmEdit.noFarmTitle')}</h2>
+        <p className="text-slate-500 mt-2 mb-6">{t('farmEdit.noFarmDesc')}</p>
+        <Link href="/dashboard" className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors">{t('zones.noFarm.cta')}</Link>
       </div>
     )
   }
@@ -96,28 +98,28 @@ export default function FarmEditClient({ initialFarm }: { initialFarm: Farm }) {
     <div className="max-w-6xl mx-auto space-y-6 p-4">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Edit Farm</h1>
-          <p className="text-slate-500 mt-1">Update your farm details and boundary.</p>
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">{t('farmEdit.title')}</h1>
+          <p className="text-slate-500 mt-1">{t('farmEdit.subtitle')}</p>
         </div>
-        <Link href="/dashboard/farms" className="text-sm font-semibold text-slate-500 hover:text-slate-700">Back to Farms</Link>
+        <Link href="/dashboard/farms" className="text-sm font-semibold text-slate-500 hover:text-slate-700">{t('farmEdit.back')}</Link>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         <div className="lg:col-span-2 bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Farm Name</label>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('farmEdit.name')}</label>
               <input name="name" value={form.name} onChange={handleChange} className="w-full rounded-xl border border-slate-200 p-3 text-sm focus:border-green-500 focus:ring-2 focus:ring-green-200" required />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Location</label>
-              <input name="location" value={form.location} onChange={handleChange} placeholder="City / Province" className="w-full rounded-xl border border-slate-200 p-3 text-sm focus:border-green-500 focus:ring-2 focus:ring-green-200" />
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('farmEdit.location')}</label>
+              <input name="location" value={form.location} onChange={handleChange} placeholder={t('farmEdit.locationPlaceholder')} className="w-full rounded-xl border border-slate-200 p-3 text-sm focus:border-green-500 focus:ring-2 focus:ring-green-200" />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Total Area (ha)</label>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('farmEdit.totalArea')}</label>
               <input name="total_area_ha" type="number" step="0.01" value={form.total_area_ha} onChange={(e) => setForm({ ...form, total_area_ha: e.target.value })} readOnly className="w-full rounded-xl border border-slate-200 p-3 text-sm focus:border-green-500 focus:ring-2 focus:ring-green-200" />
             </div>
-            <button type="submit" disabled={saving} className="w-full rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-60">{saving ? 'Saving...' : 'Save Farm'}</button>
+            <button type="submit" disabled={saving} className="w-full rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-60">{saving ? t('farmEdit.saving') : t('farmEdit.save')}</button>
           </form>
         </div>
 
@@ -128,8 +130,8 @@ export default function FarmEditClient({ initialFarm }: { initialFarm: Farm }) {
         </div>
       </div>
 
-      <ConfirmModal open={confirmOpen} title="Update farm?" message="This will save your farm details and boundary." confirmLabel="Save" onCancel={() => setConfirmOpen(false)} onConfirm={handleConfirmSave} />
-      <ErrorModal open={errorModal.open} title="Unable to save" message={errorModal.message} onClose={() => setErrorModal((prev) => ({ ...prev, open: false }))} />
+      <ConfirmModal open={confirmOpen} title={t('farmEdit.confirmTitle')} message={t('farmEdit.confirmMessage')} confirmLabel={t('common.save')} onCancel={() => setConfirmOpen(false)} onConfirm={handleConfirmSave} />
+      <ErrorModal open={errorModal.open} title={t('common.unableToSave')} message={errorModal.message} onClose={() => setErrorModal((prev) => ({ ...prev, open: false }))} />
       <Toast open={toast.open} message={toast.message} onClose={() => setToast((prev) => ({ ...prev, open: false }))} />
     </div>
   )

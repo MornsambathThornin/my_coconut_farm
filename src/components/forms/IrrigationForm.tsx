@@ -6,6 +6,7 @@ import ConfirmModal from '@/components/ui/ConfirmModal'
 import ErrorModal from '@/components/ui/ErrorModal'
 import Toast from '@/components/ui/Toast'
 import { useFarmContext } from '@/context/FarmContext'
+import { useTranslations } from '@/lib/useTranslations'
 
 type Zone = {
   id: string
@@ -19,6 +20,7 @@ type Props = {
 }
 
 export default function IrrigationForm({ zoneId, farmId, onSuccess }: Props) {
+  const { t } = useTranslations()
   const today = new Date().toISOString().split('T')[0]
   const [zones, setZones] = useState<Zone[]>([])
   const [form, setForm] = useState({
@@ -39,15 +41,15 @@ export default function IrrigationForm({ zoneId, farmId, onSuccess }: Props) {
 
   const validation = useMemo(() => {
     const errors: Record<string, string> = {}
-    if (!form.zone_id) errors.zone_id = 'Zone is required.'
-    if (!form.irrigation_date) errors.irrigation_date = 'Irrigation date is required.'
-    if (form.irrigation_date && form.irrigation_date > today) errors.irrigation_date = 'Irrigation date cannot be in the future.'
+    if (!form.zone_id) errors.zone_id = t('irrigationForm.errorZoneRequired')
+    if (!form.irrigation_date) errors.irrigation_date = t('irrigationForm.errorDateRequired')
+    if (form.irrigation_date && form.irrigation_date > today) errors.irrigation_date = t('irrigationForm.errorDateFuture')
     if (form.duration_minutes) {
       const duration = Number(form.duration_minutes)
-      if (Number.isNaN(duration) || duration < 0) errors.duration_minutes = 'Duration must be positive.'
+      if (Number.isNaN(duration) || duration < 0) errors.duration_minutes = t('irrigationForm.errorDuration')
     }
     return errors
-  }, [form, today])
+  }, [form, today, t])
 
   const { activeFarm } = useFarmContext()
   const resolvedFarmId = farmId ?? activeFarm?.id
@@ -91,7 +93,7 @@ export default function IrrigationForm({ zoneId, farmId, onSuccess }: Props) {
       setLoading(false)
       setErrorModal({
         open: true,
-        message: 'No farm selected for this log.',
+        message: t('irrigationForm.errorNoFarm'),
       })
       return
     }
@@ -114,7 +116,7 @@ export default function IrrigationForm({ zoneId, farmId, onSuccess }: Props) {
     setLoading(false)
 
     if (!res.ok) {
-      setErrorModal({ open: true, message: payload?.error || 'Unable to save irrigation log.' })
+      setErrorModal({ open: true, message: payload?.error || t('irrigationForm.errorGeneric') })
       return
     }
 
@@ -127,7 +129,7 @@ export default function IrrigationForm({ zoneId, farmId, onSuccess }: Props) {
         water_source: '',
         notes: '',
       })
-      setToast({ open: true, message: 'Irrigation log saved.' })
+      setToast({ open: true, message: t('irrigationForm.savedToast') })
       onSuccess?.()
     }
   }
@@ -142,7 +144,7 @@ export default function IrrigationForm({ zoneId, farmId, onSuccess }: Props) {
           required
           className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
         >
-          <option value="">Select Zone</option>
+          <option value="">{t('irrigationForm.selectZone')}</option>
           {zones.map((z) => (
             <option key={z.id} value={z.id}>
               {z.name}
@@ -164,7 +166,7 @@ export default function IrrigationForm({ zoneId, farmId, onSuccess }: Props) {
       <input
         type="text"
         name="method"
-        placeholder="Method (Drip / Hose / Sprinkler)"
+        placeholder={t('irrigationForm.methodPlaceholder')}
         value={form.method}
         onChange={handleChange}
         className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
@@ -173,7 +175,7 @@ export default function IrrigationForm({ zoneId, farmId, onSuccess }: Props) {
       <input
         type="number"
         name="duration_minutes"
-        placeholder="Duration (minutes)"
+        placeholder={t('irrigationForm.durationPlaceholder')}
         value={form.duration_minutes}
         onChange={handleChange}
         className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
@@ -182,7 +184,7 @@ export default function IrrigationForm({ zoneId, farmId, onSuccess }: Props) {
       <input
         type="text"
         name="water_source"
-        placeholder="Water source (Well / Pond / Rain)"
+        placeholder={t('irrigationForm.sourcePlaceholder')}
         value={form.water_source}
         onChange={handleChange}
         className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
@@ -190,7 +192,7 @@ export default function IrrigationForm({ zoneId, farmId, onSuccess }: Props) {
 
       <textarea
         name="notes"
-        placeholder="Notes"
+        placeholder={t('irrigationForm.notesPlaceholder')}
         value={form.notes}
         onChange={handleChange}
         className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
@@ -201,19 +203,19 @@ export default function IrrigationForm({ zoneId, farmId, onSuccess }: Props) {
         disabled={loading}
         className="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700"
       >
-        {loading ? 'Saving...' : 'Add Irrigation'}
+        {loading ? t('irrigationForm.submitting') : t('irrigationForm.submit')}
       </button>
       <ConfirmModal
         open={confirmOpen}
-        title="Add irrigation log?"
-        message="This will save the irrigation entry to the selected zone."
-        confirmLabel="Save"
+        title={t('irrigationForm.confirmTitle')}
+        message={t('irrigationForm.confirmMessage')}
+        confirmLabel={t('common.save')}
         onCancel={() => setConfirmOpen(false)}
         onConfirm={handleConfirmSubmit}
       />
       <ErrorModal
         open={errorModal.open}
-        title="Unable to save"
+        title={t('common.unableToSave')}
         message={errorModal.message}
         onClose={() =>
           setErrorModal((prev) => ({ ...prev, open: false }))

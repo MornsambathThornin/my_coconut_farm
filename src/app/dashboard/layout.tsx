@@ -1,7 +1,6 @@
 import Sidebar from '@/components/layout/Sidebar'
 import AuthGuard from '@/components/AuthGuard'
 import { FarmProvider } from '@/context/FarmContext'
-import { LocaleProvider } from '@/context/LocaleContext'
 
 export default function DashboardLayout({
   children,
@@ -10,14 +9,12 @@ export default function DashboardLayout({
 }) {
   return (
     <AuthGuard>
-      <LocaleProvider>
-        <FarmProvider>
-          <div className="flex min-h-screen bg-gray-100">
-            <Sidebar />
-            <main className="flex-1 p-6">{children}</main>
-          </div>
-        </FarmProvider>
-      </LocaleProvider>
+      <FarmProvider>
+        <div className="flex min-h-screen bg-gray-100">
+          <Sidebar />
+          <main className="flex-1 p-6">{children}</main>
+        </div>
+      </FarmProvider>
     </AuthGuard>
   )
 }

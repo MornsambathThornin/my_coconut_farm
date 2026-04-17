@@ -10,11 +10,13 @@ import Toast from '@/components/ui/Toast'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import type { CropType } from '@/types/db'
 import { useFarmContext } from '@/context/FarmContext'
+import { useTranslations } from '@/lib/useTranslations'
 
 export default function ZoneCreatePage() {
   const router = useRouter()
   const { user, loading: authLoading } = useAuthUser()
   const { activeFarm } = useFarmContext()
+  const { t } = useTranslations()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -88,12 +90,12 @@ export default function ZoneCreatePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!user || !activeFarm) {
-      setError("Please pick a farm before creating a zone.")
+      setError(t('zoneCreate.errorPickFarm'))
       return
     }
 
     if (!boundary.length) {
-      setError('Draw zone first to save boundary.')
+      setError(t('zoneCreate.errorDrawFirst'))
       return
     }
 
@@ -123,19 +125,19 @@ export default function ZoneCreatePage() {
 
     const payload = await res.json()
     if (!res.ok) {
-      setError(payload?.error || 'Unable to create zone')
+      setError(payload?.error || t('zoneCreate.errorGeneric'))
       setSaving(false)
       return
     }
 
-    setToast({ open: true, message: 'Zone created.' })
+    setToast({ open: true, message: t('zoneCreate.createdToast') })
     router.push('/dashboard/zones')
   }
 
   if (loading || authLoading) {
     return (
       <div className="p-10 text-center animate-pulse text-slate-500">
-        Loading...
+        {t('common.loading')}
       </div>
     )
   }
@@ -144,15 +146,15 @@ export default function ZoneCreatePage() {
     return (
       <div className="max-w-md mx-auto mt-20 text-center p-8 bg-white rounded-2xl border border-slate-200 shadow-sm">
         <div className="text-4xl mb-4">🚜</div>
-        <h2 className="text-xl font-bold text-slate-900">No Farm Detected</h2>
+        <h2 className="text-xl font-bold text-slate-900">{t('zones.noFarm.title')}</h2>
         <p className="text-slate-500 mt-2 mb-6">
-          You need to set up your farm profile before creating zones.
+          {t('zoneCreate.noFarmDesc')}
         </p>
         <Link
           href="/dashboard"
           className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors"
         >
-          Go to Dashboard →
+          {t('zones.noFarm.cta')}
         </Link>
       </div>
     )
@@ -163,17 +165,17 @@ export default function ZoneCreatePage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-            Create Zone
+            {t('zoneCreate.title')}
           </h1>
           <p className="text-slate-500 mt-1">
-            Draw the boundary on the map and add zone details.
+            {t('zoneCreate.subtitle')}
           </p>
         </div>
         <Link
           href="/dashboard/zones"
           className="text-sm font-semibold text-slate-500 hover:text-slate-700"
         >
-          Back to Zones
+          {t('zoneCreate.back')}
         </Link>
       </div>
 
@@ -182,20 +184,20 @@ export default function ZoneCreatePage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
-                Zone Name
+                {t('zoneCreate.name')}
               </label>
               <input
                 name="name"
                 value={form.name}
                 onChange={handleChange}
-                placeholder="e.g. North Slope Section A"
+                placeholder={t('zoneCreate.namePlaceholder')}
                 className="w-full rounded-xl border border-slate-200 p-3 text-sm focus:border-green-500 focus:ring-2 focus:ring-green-200"
                 required
               />
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
-                Area (ha)
+                {t('zoneCreate.area')}
               </label>
               <input
                 name="area_ha"
@@ -210,20 +212,20 @@ export default function ZoneCreatePage() {
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
-                Tree Count
+                {t('zoneCreate.treeCount')}
               </label>
               <input
                 name="tree_count"
                 type="number"
                 value={form.tree_count}
                 onChange={handleChange}
-                placeholder="Total trees"
+                placeholder={t('zoneCreate.treeCountPlaceholder')}
                 className="w-full rounded-xl border border-slate-200 p-3 text-sm focus:border-green-500 focus:ring-2 focus:ring-green-200"
               />
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
-                Avg Tree Age (years)
+                {t('zoneCreate.avgTreeAge')}
               </label>
               <input
                 name="avg_tree_age_years"
@@ -231,25 +233,25 @@ export default function ZoneCreatePage() {
                 step="0.1"
                 value={form.avg_tree_age_years}
                 onChange={handleChange}
-                placeholder="Years"
+                placeholder={t('zoneCreate.avgTreeAgePlaceholder')}
                 className="w-full rounded-xl border border-slate-200 p-3 text-sm focus:border-green-500 focus:ring-2 focus:ring-green-200"
               />
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
-                Variety
+                {t('zoneCreate.variety')}
               </label>
               <input
                 name="variety"
                 value={form.variety}
                 onChange={handleChange}
-                placeholder="e.g. Nam Hom"
+                placeholder={t('zoneCreate.varietyPlaceholder')}
                 className="w-full rounded-xl border border-slate-200 p-3 text-sm focus:border-green-500 focus:ring-2 focus:ring-green-200"
               />
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
-                Crop Type
+                {t('zoneCreate.cropType')}
               </label>
               <select
                 name="crop_type_id"
@@ -257,24 +259,24 @@ export default function ZoneCreatePage() {
                 onChange={handleChange}
                 className="w-full rounded-xl border border-slate-200 p-3 text-sm focus:border-green-500 focus:ring-2 focus:ring-green-200"
               >
-                <option value="">Select crop type</option>
+                <option value="">{t('zoneCreate.cropTypeSelect')}</option>
                 {cropTypes.map((crop) => (
                   <option key={crop.id} value={crop.id}>
-                    {crop.name_en ?? "Unnamed crop"}
+                    {crop.name_en ?? t('zoneCreate.cropTypeUnnamed')}
                   </option>
                 ))}
               </select>
               {selectedCropType?.default_unit ? (
                 <p className="text-xs text-slate-400 mt-1">
-                  Default unit: {selectedCropType.default_unit}
+                  {t('zoneCreate.defaultUnit').replace('{unit}', selectedCropType.default_unit)}
                 </p>
               ) : null}
             </div>
 
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
               {pointsCount
-                ? `${pointsCount} boundary points captured.`
-                : 'Draw zone first to capture the boundary.'}
+                ? t('zoneCreate.pointsCaptured').replace('{count}', String(pointsCount))
+                : t('zoneCreate.drawFirst')}
             </div>
 
             {error ? (
@@ -286,7 +288,7 @@ export default function ZoneCreatePage() {
               disabled={saving}
               className="w-full rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-60"
             >
-              {saving ? 'Saving...' : 'Create Zone'}
+              {saving ? t('zoneCreate.submitting') : t('zoneCreate.submit')}
             </button>
           </form>
         </div>
@@ -315,9 +317,9 @@ export default function ZoneCreatePage() {
       />
       <ConfirmModal
         open={confirmOpen}
-        title="Create zone?"
-        message="This will save the zone and its boundary."
-        confirmLabel="Create"
+        title={t('zoneCreate.confirmTitle')}
+        message={t('zoneCreate.confirmMessage')}
+        confirmLabel={t('zoneCreate.confirmLabel')}
         onCancel={() => setConfirmOpen(false)}
         onConfirm={handleConfirmCreate}
       />

@@ -5,6 +5,7 @@ import type { FormEvent } from 'react'
 import { useFarmContext, type FarmRecord } from '@/context/FarmContext'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import ZoneDrawMap from '@/components/maps/ZoneDrawMap'
+import { useTranslations } from '@/lib/useTranslations'
 
 type Props = {
   onSuccess?: (farm: FarmRecord) => void
@@ -12,6 +13,7 @@ type Props = {
 
 export default function FarmCreateForm({ onSuccess }: Props) {
   const { createFarm, loading, setActiveFarmId } = useFarmContext()
+  const { t } = useTranslations()
   const [form, setForm] = useState({ name: '', location: '', total_area_ha: '' })
   const [boundary, setBoundary] = useState<[number, number][]>([])
   const [error, setError] = useState<string | null>(null)
@@ -21,20 +23,20 @@ export default function FarmCreateForm({ onSuccess }: Props) {
   const validation = useMemo(() => {
     const errors: Record<string, string> = {}
     const name = form.name.trim()
-    if (!name) errors.name = 'Farm name is required'
-    else if (name.length > 100) errors.name = 'Farm name is too long'
+    if (!name) errors.name = t('farmForm.nameRequired')
+    else if (name.length > 100) errors.name = t('farmForm.nameTooLong')
 
     const location = form.location.trim()
-    if (location.length > 120) errors.location = 'Location must be 120 characters or less'
+    if (location.length > 120) errors.location = t('farmForm.locationTooLong')
 
     if (form.total_area_ha) {
       const value = Number(form.total_area_ha)
-      if (Number.isNaN(value)) errors.total_area_ha = 'Total area must be a number'
-      else if (value < 0) errors.total_area_ha = 'Total area must be zero or greater'
+      if (Number.isNaN(value)) errors.total_area_ha = t('farmForm.totalAreaNotNumber')
+      else if (value < 0) errors.total_area_ha = t('farmForm.totalAreaNegative')
     }
 
     return errors
-  }, [form])
+  }, [form, t])
 
   const showFieldErrors = submitAttempted
   const isValid = Object.keys(validation).length === 0
@@ -80,7 +82,7 @@ export default function FarmCreateForm({ onSuccess }: Props) {
       if (created.id) setActiveFarmId(created.id)
       onSuccess?.(created)
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Unable to create farm'
+      const message = err instanceof Error ? err.message : t('farmForm.unableToCreate')
       setError(message)
       setConfirmOpen(false)
     }
@@ -96,7 +98,7 @@ export default function FarmCreateForm({ onSuccess }: Props) {
         )}
         <div>
           <label htmlFor="farm-name" className="mb-1 block text-sm font-medium text-slate-700">
-            Farm name
+            {t('farmForm.name')}
           </label>
           <input
             id="farm-name"
@@ -104,7 +106,7 @@ export default function FarmCreateForm({ onSuccess }: Props) {
             value={form.name}
             onChange={handleChange}
             required
-            placeholder="e.g. North Field"
+            placeholder={t('farmForm.namePlaceholder')}
             className="w-full rounded-lg border border-slate-300 p-2.5 text-slate-900 placeholder:text-slate-400 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
             aria-invalid={showFieldErrors && !!validation.name}
             aria-describedby={showFieldErrors && validation.name ? 'farm-name-error' : undefined}
@@ -117,14 +119,14 @@ export default function FarmCreateForm({ onSuccess }: Props) {
         </div>
         <div>
           <label htmlFor="farm-location" className="mb-1 block text-sm font-medium text-slate-700">
-            Location
+            {t('farmForm.location')}
           </label>
           <input
             id="farm-location"
             name="location"
             value={form.location}
             onChange={handleChange}
-            placeholder="e.g. Province, region"
+            placeholder={t('farmForm.locationPlaceholder')}
             className="w-full rounded-lg border border-slate-300 p-2.5 text-slate-900 placeholder:text-slate-400 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
             aria-invalid={showFieldErrors && !!validation.location}
             aria-describedby={showFieldErrors && validation.location ? 'farm-location-error' : undefined}
@@ -137,14 +139,14 @@ export default function FarmCreateForm({ onSuccess }: Props) {
         </div>
         <div>
           <label htmlFor="farm-area" className="mb-1 block text-sm font-medium text-slate-700">
-            Total area (ha)
+            {t('farmForm.totalArea')}
           </label>
           <input
             id="farm-area"
             name="total_area_ha"
             value={form.total_area_ha}
             onChange={handleChange}
-            placeholder="Optional — or draw boundary below"
+            placeholder={t('farmForm.totalAreaPlaceholder')}
             type="number"
             min="0"
             step="0.01"
@@ -164,7 +166,7 @@ export default function FarmCreateForm({ onSuccess }: Props) {
             disabled={loading}
             className="rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50 disabled:pointer-events-none"
           >
-            {loading ? 'Creating…' : 'Create farm'}
+            {loading ? t('farmForm.submitting') : t('farmForm.submit')}
           </button>
         </div>
       </form>
@@ -179,13 +181,13 @@ export default function FarmCreateForm({ onSuccess }: Props) {
         </div>
       </div>
       <p className="text-xs text-slate-500">
-        Use the drawing tools to outline your farm boundary; the area input will update automatically.
+        {t('farmForm.drawHelper')}
       </p>
       <ConfirmModal
         open={confirmOpen}
-        title="Create farm?"
-        message="This will create a new farm profile with the provided details."
-        confirmLabel={loading ? 'Creating…' : 'Create'}
+        title={t('farmForm.confirmTitle')}
+        message={t('farmForm.confirmMessage')}
+        confirmLabel={loading ? t('farmForm.submitting') : t('farmForm.confirmLabel')}
         loading={loading}
         onCancel={() => setConfirmOpen(false)}
         onConfirm={handleConfirmCreate}

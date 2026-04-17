@@ -399,12 +399,12 @@ export default function ZoneDetailPage() {
       setDeleteLoading(false);
       return;
     }
-    setDeleteToast({ open: true, message: "Zone deleted." });
+    setDeleteToast({ open: true, message: t("zoneDetail.deletedToast") });
     router.push("/dashboard/zones");
   };
 
-  if (loading || authLoading) return <div className="p-10 text-center animate-pulse text-slate-500">Loading Zone Data...</div>;
-  if (error) return <div className="p-10 text-red-500 text-center bg-red-50 rounded-xl m-4">Error: {error}</div>;
+  if (loading || authLoading) return <div className="p-10 text-center animate-pulse text-slate-500">{t("zoneDetail.loading")}</div>;
+  if (error) return <div className="p-10 text-red-500 text-center bg-red-50 rounded-xl m-4">{t("common.error")}: {error}</div>;
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-20 animate-in fade-in duration-500">
@@ -414,23 +414,23 @@ export default function ZoneDetailPage() {
           <div className="flex items-center justify-center w-8 h-8 rounded-full bg-white shadow-sm border border-slate-200 group-hover:border-green-200 group-hover:bg-green-50">
             <ChevronLeft className="w-4 h-4" />
           </div>
-          Back to All Zones
+          {t("zoneDetail.backAll")}
         </Link>
         <div className="flex gap-2">
-          <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold uppercase tracking-tighter">Zone Active</span>
+          <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold uppercase tracking-tighter">{t("zoneDetail.active")}</span>
           <button
             type="button"
             onClick={() => setEditFormOpen(true)}
             className="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-xs font-bold uppercase tracking-tighter hover:bg-slate-200"
           >
-            Edit Zone
+            {t("zoneDetail.edit")}
           </button>
           <button
             type="button"
             onClick={() => setDeleteConfirmOpen(true)}
             className="px-3 py-1 bg-red-50 text-red-700 rounded-full text-xs font-bold uppercase tracking-tighter hover:bg-red-100"
           >
-            Delete Zone
+            {t("zoneDetail.delete")}
           </button>
         </div>
       </nav>
@@ -450,7 +450,7 @@ export default function ZoneDetailPage() {
                   <span className="font-semibold text-slate-700">
                     {displayZone?.variety ||
                       displayZone?.crop_type?.name_en ||
-                      "Mixed"}
+                      t("zoneDetail.mixedVariety")}
                   </span>
                 </span>
                 {displayZone?.crop_type?.name_en ? (
@@ -499,7 +499,7 @@ export default function ZoneDetailPage() {
               </p>
             </div>
             <div className="pt-4 border-t border-white/10 text-xs">
-              Total Production:{" "}
+              {t("zoneDetail.totalProduction")}:{" "}
               <span className="font-bold">
                 {totalHarvestQuantity.toLocaleString()} {harvestUnit}
               </span>
@@ -535,13 +535,13 @@ export default function ZoneDetailPage() {
           <div className="space-y-6 animate-in slide-in-from-bottom-2 duration-500">
             <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
               <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
-                <Activity className="w-5 h-5 text-green-500" /> Production Trend
+                <Activity className="w-5 h-5 text-green-500" /> {t("zoneDetail.productionTrend")}
               </h3>
               <div className="h-[300px] w-full">
                 {chartData.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-100 rounded-2xl">
                     <Info className="w-8 h-8 mb-2 opacity-20" />
-                    <p className="text-sm">No harvest data recorded yet for this zone.</p>
+                    <p className="text-sm">{t("zoneDetail.noHarvestData")}</p>
                   </div>
                 ) : (
                   <ProductionChart data={chartData} />
@@ -552,20 +552,20 @@ export default function ZoneDetailPage() {
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                   <TrendingUp className="w-5 h-5 text-fuchsia-500" />
-                  Seasonal Forecast
+                  {t("zoneDetail.forecast.title")}
                 </h3>
                 <span className="text-xs uppercase tracking-[0.3em] text-slate-400">
                   SMA v1
                 </span>
               </div>
               <p className="text-xs text-slate-500">
-                Projected kg/ha based on the latest Khmer-focused seasonal model.
+                {t("zoneDetail.forecast.desc")}
               </p>
               <div className="h-[260px] w-full">
                 {forecastChartData.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-100 rounded-2xl">
                     <Info className="w-8 h-8 mb-2 opacity-20" />
-                    <p className="text-sm">Forecast not available yet.</p>
+                    <p className="text-sm">{t("zoneDetail.forecast.empty")}</p>
                   </div>
                 ) : (
                   <ForecastChart data={forecastChartData} />
@@ -573,19 +573,19 @@ export default function ZoneDetailPage() {
               </div>
               {latestForecast && (
                 <p className="text-xs text-slate-500">
-                  Latest ({latestForecast.month}): expected{" "}
-                  <strong>{latestForecast.expectedYield.toFixed(1)} kg/ha</strong>{" "}
-                  at{" "}
-                  <strong>
-                    {(latestForecast.confidence * 100).toFixed(0)}%
-                  </strong>{" "}
-                  confidence.
+                  {t("zoneDetail.forecast.latest")
+                    .replace("{month}", latestForecast.month)
+                    .replace("{yield}", latestForecast.expectedYield.toFixed(1))
+                    .replace(
+                      "{confidence}",
+                      (latestForecast.confidence * 100).toFixed(0),
+                    )}
                 </p>
               )}
             </div>
             <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
               <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-green-500" /> Zone Map
+                <Calendar className="w-5 h-5 text-green-500" /> {t("zoneDetail.mapTitle")}
               </h3>
               <div className="h-[360px] w-full">
                 {Array.isArray(displayZone?.boundary) &&
@@ -593,7 +593,7 @@ export default function ZoneDetailPage() {
                   <ZoneMap boundary={displayZone.boundary} />
                 ) : (
                   <div className="flex h-full items-center justify-center text-sm text-slate-500">
-                    No boundary data available for this zone.
+                    {t("zoneDetail.noBoundary")}
                   </div>
                 )}
               </div>
@@ -606,29 +606,29 @@ export default function ZoneDetailPage() {
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 animate-in fade-in duration-300">
             <div className="lg:col-span-2 space-y-4">
               <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
-                <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><PlusCircle className="w-5 h-5 text-green-600" /> New Harvest</h3>
+                <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><PlusCircle className="w-5 h-5 text-green-600" /> {t("zoneDetail.newHarvest")}</h3>
                 <button
                   type="button"
                   onClick={() => setHarvestFormOpen(true)}
                   className="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition-all shadow-lg"
                 >
-                  Add Harvest
+                  {t("zoneDetail.addHarvest")}
                 </button>
               </div>
             </div>
             <div className="lg:col-span-3 bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
               <div className="p-4 border-b border-slate-100 flex items-center gap-2">
                 <History className="w-4 h-4 text-slate-400" />
-                <h3 className="font-bold text-slate-700 uppercase text-xs tracking-widest">Harvest History</h3>
+                <h3 className="font-bold text-slate-700 uppercase text-xs tracking-widest">{t("zoneDetail.harvestHistory")}</h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left">
                   <thead className="bg-slate-50/50 border-b border-slate-100">
                     <tr>
-                      <th className="p-4 font-bold text-slate-500">Date</th>
-                      <th className="p-4 font-bold text-slate-500">Yield</th>
-                      <th className="p-4 font-bold text-slate-500">Grade</th>
-                      <th className="p-4 font-bold text-slate-500">Notes</th>
+                      <th className="p-4 font-bold text-slate-500">{t("zoneDetail.col.date")}</th>
+                      <th className="p-4 font-bold text-slate-500">{t("zoneDetail.col.yield")}</th>
+                      <th className="p-4 font-bold text-slate-500">{t("zoneDetail.col.grade")}</th>
+                      <th className="p-4 font-bold text-slate-500">{t("zoneDetail.col.notes")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -648,7 +648,7 @@ export default function ZoneDetailPage() {
             </div>
             <FormDialog
               open={harvestFormOpen}
-              title="New Harvest"
+              title={t("zoneDetail.newHarvest")}
               onClose={() => setHarvestFormOpen(false)}
             >
               <HarvestForm
@@ -669,21 +669,21 @@ export default function ZoneDetailPage() {
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 animate-in fade-in duration-300">
                <div className="lg:col-span-2">
                 <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
-                  <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Droplets className="w-5 h-5 text-blue-500" /> Log Irrigation</h3>
+                  <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Droplets className="w-5 h-5 text-blue-500" /> {t("zoneDetail.logIrrigation")}</h3>
                   <button
                     type="button"
                     onClick={() => setIrrigationFormOpen(true)}
                     className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg"
                   >
-                    Add Irrigation
+                    {t("zoneDetail.addIrrigation")}
                   </button>
                 </div>
               </div>
               <div className="lg:col-span-3 bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
-                <div className="p-4 border-b border-slate-100 font-bold text-xs uppercase tracking-widest text-slate-500">Irrigation Logs</div>
+                <div className="p-4 border-b border-slate-100 font-bold text-xs uppercase tracking-widest text-slate-500">{t("zoneDetail.irrigationLogs")}</div>
                 <table className="w-full text-sm text-left">
                   <thead className="bg-slate-50/50">
-                    <tr><th className="p-4 font-bold">Date</th><th className="p-4 font-bold">Method</th><th className="p-4 font-bold">Notes</th></tr>
+                    <tr><th className="p-4 font-bold">{t("zoneDetail.col.date")}</th><th className="p-4 font-bold">{t("zoneDetail.col.method")}</th><th className="p-4 font-bold">{t("zoneDetail.col.notes")}</th></tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {irrigations.map(i => (
@@ -699,7 +699,7 @@ export default function ZoneDetailPage() {
             </div>
             <FormDialog
               open={irrigationFormOpen}
-              title="Log Irrigation"
+              title={t("zoneDetail.logIrrigation")}
               onClose={() => setIrrigationFormOpen(false)}
             >
               <IrrigationForm
@@ -738,7 +738,7 @@ export default function ZoneDetailPage() {
                <div className="overflow-x-auto">
                  <table className="w-full text-sm text-left">
                    <thead className="bg-slate-50/50">
-                     <tr><th className="p-4 font-bold">Year</th><th className="p-4 font-bold">Variety</th><th className="p-4 font-bold">Trees</th><th className="p-4 font-bold">Notes</th></tr>
+                     <tr><th className="p-4 font-bold">{t("zoneDetail.col.year")}</th><th className="p-4 font-bold">{t("zoneDetail.col.variety")}</th><th className="p-4 font-bold">{t("zoneDetail.col.trees")}</th><th className="p-4 font-bold">{t("zoneDetail.col.notes")}</th></tr>
                    </thead>
                    <tbody className="divide-y divide-slate-100">
                      {batches.map(b => (
@@ -760,27 +760,27 @@ export default function ZoneDetailPage() {
             >
               <form onSubmit={handleBatchSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <input name="planting_year" value={batchForm.planting_year} onChange={handleBatchChange} placeholder="Year" type="number" className="w-full border-slate-200 p-3 rounded-xl focus:ring-green-500 focus:border-green-500 transition-all text-sm" required />
-                  <input name="tree_count" value={batchForm.tree_count} onChange={handleBatchChange} placeholder="Count" type="number" className="w-full border-slate-200 p-3 rounded-xl focus:ring-green-500 focus:border-green-500 transition-all text-sm" required />
+                  <input name="planting_year" value={batchForm.planting_year} onChange={handleBatchChange} placeholder={t("zoneDetail.batchPlaceholder.year")} type="number" className="w-full border-slate-200 p-3 rounded-xl focus:ring-green-500 focus:border-green-500 transition-all text-sm" required />
+                  <input name="tree_count" value={batchForm.tree_count} onChange={handleBatchChange} placeholder={t("zoneDetail.batchPlaceholder.count")} type="number" className="w-full border-slate-200 p-3 rounded-xl focus:ring-green-500 focus:border-green-500 transition-all text-sm" required />
                 </div>
-                <input name="variety" value={batchForm.variety} onChange={handleBatchChange} placeholder="Variety Name" className="w-full border-slate-200 p-3 rounded-xl focus:ring-green-500 focus:border-green-500 transition-all text-sm" />
-                <textarea name="notes" value={batchForm.notes} onChange={handleBatchChange} placeholder="Observations..." rows={3} className="w-full border-slate-200 p-3 rounded-xl focus:ring-green-500 focus:border-green-500 transition-all text-sm" />
+                <input name="variety" value={batchForm.variety} onChange={handleBatchChange} placeholder={t("zoneDetail.batchPlaceholder.variety")} className="w-full border-slate-200 p-3 rounded-xl focus:ring-green-500 focus:border-green-500 transition-all text-sm" />
+                <textarea name="notes" value={batchForm.notes} onChange={handleBatchChange} placeholder={t("zoneDetail.batchPlaceholder.observations")} rows={3} className="w-full border-slate-200 p-3 rounded-xl focus:ring-green-500 focus:border-green-500 transition-all text-sm" />
                 <button type="submit" disabled={batchSaving} className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-slate-800 transition-all shadow-lg disabled:opacity-50">
-                  {batchSaving ? "Registering..." : "Save Planting Batch"}
+                  {batchSaving ? t("zoneDetail.batchSubmitting") : t("zoneDetail.batchSubmit")}
                 </button>
               </form>
             </FormDialog>
             <ConfirmModal
               open={batchConfirmOpen}
-              title="Add planting batch?"
-              message="This will save the batch to the current zone."
-              confirmLabel="Save"
+              title={t("zoneDetail.batchConfirmTitle")}
+              message={t("zoneDetail.batchConfirmMsg")}
+              confirmLabel={t("common.save")}
               onCancel={() => setBatchConfirmOpen(false)}
               onConfirm={handleBatchConfirm}
             />
             <ErrorModal
               open={batchError.open}
-              title="Unable to save"
+              title={t("common.unableToSave")}
               message={batchError.message}
               onClose={() =>
                 setBatchError((prev) => ({ ...prev, open: false }))
@@ -798,13 +798,13 @@ export default function ZoneDetailPage() {
       </div>
       <FormDialog
         open={editFormOpen}
-        title="Edit Zone"
+        title={t("zoneDetail.edit")}
         onClose={() => setEditFormOpen(false)}
       >
         <form onSubmit={handleEditSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
-              Zone Name
+              {t("zoneCreate.name")}
             </label>
             <input
               name="name"
@@ -817,7 +817,7 @@ export default function ZoneDetailPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
-                Area (ha)
+                {t("zoneCreate.area")}
               </label>
               <input
                 name="area_ha"
@@ -831,7 +831,7 @@ export default function ZoneDetailPage() {
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
-                Tree Count
+                {t("zoneCreate.treeCount")}
               </label>
               <input
                 name="tree_count"
@@ -845,7 +845,7 @@ export default function ZoneDetailPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
-                Avg Tree Age (years)
+                {t("zoneCreate.avgTreeAge")}
               </label>
               <input
                 name="avg_tree_age_years"
@@ -858,7 +858,7 @@ export default function ZoneDetailPage() {
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
-                Variety
+                {t("zoneCreate.variety")}
               </label>
               <input
                 name="variety"
@@ -870,7 +870,7 @@ export default function ZoneDetailPage() {
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
-              Crop Type
+              {t("zoneCreate.cropType")}
             </label>
             <select
               name="crop_type_id"
@@ -878,16 +878,16 @@ export default function ZoneDetailPage() {
               onChange={handleEditChange}
               className="w-full rounded-xl border border-slate-200 p-3 text-sm focus:border-green-500 focus:ring-2 focus:ring-green-200"
             >
-              <option value="">Select crop type</option>
+              <option value="">{t("zoneCreate.cropTypeSelect")}</option>
               {cropTypes.map((crop) => (
                 <option key={crop.id} value={crop.id}>
-                  {crop.name_en ?? "Unnamed crop"}
+                  {crop.name_en ?? t("zoneCreate.cropTypeUnnamed")}
                 </option>
               ))}
             </select>
             {selectedEditCropType?.default_unit ? (
               <p className="text-xs text-slate-400 mt-1">
-                Default unit: {selectedEditCropType.default_unit}
+                {t("zoneCreate.defaultUnit").replace("{unit}", selectedEditCropType.default_unit)}
               </p>
             ) : null}
           </div>
@@ -909,13 +909,13 @@ export default function ZoneDetailPage() {
             disabled={editSaving}
             className="w-full rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-60"
           >
-            {editSaving ? "Saving..." : "Save Changes"}
+            {editSaving ? t("zoneDetail.editSaving") : t("zoneDetail.editSave")}
           </button>
         </form>
       </FormDialog>
       <ErrorModal
         open={editError.open}
-        title="Unable to update"
+        title={t("zoneDetail.editErrorTitle")}
         message={editError.message}
         onClose={() =>
           setEditError((prev) => ({ ...prev, open: false }))
@@ -930,15 +930,15 @@ export default function ZoneDetailPage() {
       />
       <ConfirmModal
         open={deleteConfirmOpen}
-        title="Delete this zone?"
-        message="This will permanently delete the zone and cannot be undone."
-        confirmLabel={deleteLoading ? "Deleting..." : "Delete"}
+        title={t("zoneDetail.deleteTitle")}
+        message={t("zoneDetail.deleteMsg")}
+        confirmLabel={deleteLoading ? t("zoneDetail.deleting") : t("zoneDetail.deleteConfirm")}
         onCancel={() => setDeleteConfirmOpen(false)}
         onConfirm={handleConfirmDelete}
       />
       <ErrorModal
         open={deleteError.open}
-        title="Unable to delete"
+        title={t("zoneDetail.deleteErrorTitle")}
         message={deleteError.message}
         onClose={() =>
           setDeleteError((prev) => ({ ...prev, open: false }))
