@@ -5,6 +5,7 @@ import IrrigationForm from '@/components/forms/IrrigationForm'
 import FormDialog from '@/components/ui/FormDialog'
 import { useAuthUser } from '@/lib/useAuthUser'
 import { useFarmContext } from '@/context/FarmContext'
+import { useTranslations } from '@/lib/useTranslations'
 
 type IrrigationLog = {
   id: string
@@ -20,6 +21,7 @@ type IrrigationLog = {
 export default function IrrigationPage() {
   const { user, loading: authLoading } = useAuthUser()
   const { activeFarm } = useFarmContext()
+  const { t } = useTranslations()
   const [logs, setLogs] = useState<IrrigationLog[]>([])
   const [fetching, setFetching] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -55,7 +57,7 @@ export default function IrrigationPage() {
   if (loading || authLoading) {
     return (
       <div className="p-10 text-center animate-pulse text-slate-500">
-        Loading irrigation logs...
+        {t('common.loading')}
       </div>
     )
   }
@@ -63,7 +65,7 @@ export default function IrrigationPage() {
   if (error) {
     return (
       <div className="p-10 text-red-500 text-center bg-red-50 rounded-xl m-4">
-        Error: {error}
+        {t('common.error')}: {error}
       </div>
     )
   }
@@ -73,12 +75,12 @@ export default function IrrigationPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-            Irrigation Logs
+            {t('irrigation.title')}
           </h1>
           <p className="text-slate-500 mt-1">
             {activeFarm
-              ? `Viewing irrigation records for ${activeFarm.name}`
-              : "Select a farm to see irrigation logs."}
+              ? t('irrigation.subtitleWithFarm').replace('{farm}', activeFarm.name)
+              : t('irrigation.subtitleNoFarm')}
           </p>
         </div>
         <button
@@ -91,29 +93,29 @@ export default function IrrigationPage() {
               : "bg-slate-300 cursor-not-allowed"
           }`}
         >
-          Add Irrigation
+          {t('irrigation.add')}
         </button>
       </div>
 
       <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
         <div className="p-4 border-b border-slate-100 font-bold text-xs uppercase tracking-widest text-slate-500">
-          All Zones
+          {t('irrigation.allZones')}
         </div>
         {logs.length === 0 ? (
           <div className="p-6 text-sm text-slate-500">
-            No irrigation logs yet.
+            {t('irrigation.empty')}
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
               <thead className="bg-slate-50/50">
                 <tr>
-                  <th className="p-4 font-bold">Date</th>
-                  <th className="p-4 font-bold">Zone</th>
-                  <th className="p-4 font-bold">Method</th>
-                  <th className="p-4 font-bold">Duration</th>
-                  <th className="p-4 font-bold">Water Source</th>
-                  <th className="p-4 font-bold">Notes</th>
+                  <th className="p-4 font-bold">{t('irrigation.col.date')}</th>
+                  <th className="p-4 font-bold">{t('irrigation.col.zone')}</th>
+                  <th className="p-4 font-bold">{t('irrigation.col.method')}</th>
+                  <th className="p-4 font-bold">{t('irrigation.col.duration')}</th>
+                  <th className="p-4 font-bold">{t('irrigation.col.source')}</th>
+                  <th className="p-4 font-bold">{t('irrigation.col.notes')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -144,7 +146,7 @@ export default function IrrigationPage() {
       </div>
       <FormDialog
         open={formOpen}
-        title="Add Irrigation Log"
+        title={t('irrigation.dialog.title')}
         onClose={() => setFormOpen(false)}
       >
         <IrrigationForm

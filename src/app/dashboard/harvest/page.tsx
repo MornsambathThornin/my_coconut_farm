@@ -5,6 +5,7 @@ import HarvestForm from '@/components/forms/HarvestForm'
 import FormDialog from '@/components/ui/FormDialog'
 import { useAuthUser } from '@/lib/useAuthUser'
 import { useFarmContext } from '@/context/FarmContext'
+import { useTranslations } from '@/lib/useTranslations'
 
 type HarvestLog = {
   id: string
@@ -20,6 +21,7 @@ type HarvestLog = {
 export default function HarvestPage() {
   const { user, loading: authLoading } = useAuthUser()
   const { activeFarm } = useFarmContext()
+  const { t } = useTranslations()
   const [logs, setLogs] = useState<HarvestLog[]>([])
   const [fetching, setFetching] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -55,7 +57,7 @@ export default function HarvestPage() {
   if (loading || authLoading) {
     return (
       <div className="p-10 text-center animate-pulse text-slate-500">
-        Loading harvest logs...
+        {t('common.loading')}
       </div>
     )
   }
@@ -63,7 +65,7 @@ export default function HarvestPage() {
   if (error) {
     return (
       <div className="p-10 text-red-500 text-center bg-red-50 rounded-xl m-4">
-        Error: {error}
+        {t('common.error')}: {error}
       </div>
     )
   }
@@ -73,12 +75,12 @@ export default function HarvestPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-            Harvest Records
+            {t('harvest.title')}
           </h1>
           <p className="text-slate-500 mt-1">
             {activeFarm
-              ? `Viewing harvest activity for ${activeFarm.name}`
-              : "Select a farm to see harvests."}
+              ? t('harvest.subtitleWithFarm').replace('{farm}', activeFarm.name)
+              : t('harvest.subtitleNoFarm')}
           </p>
         </div>
         <button
@@ -91,29 +93,29 @@ export default function HarvestPage() {
               : "bg-slate-300 cursor-not-allowed"
           }`}
         >
-          Add Harvest
+          {t('harvest.add')}
         </button>
       </div>
 
       <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
         <div className="p-4 border-b border-slate-100 font-bold text-xs uppercase tracking-widest text-slate-500">
-          All Zones
+          {t('harvest.allZones')}
         </div>
         {logs.length === 0 ? (
           <div className="p-6 text-sm text-slate-500">
-            No harvest records yet.
+            {t('harvest.empty')}
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
               <thead className="bg-slate-50/50">
                 <tr>
-                  <th className="p-4 font-bold">Date</th>
-                  <th className="p-4 font-bold">Zone</th>
-                  <th className="p-4 font-bold">Quantity</th>
-                  <th className="p-4 font-bold">Unit</th>
-                  <th className="p-4 font-bold">Grade</th>
-                  <th className="p-4 font-bold">Notes</th>
+                  <th className="p-4 font-bold">{t('harvest.col.date')}</th>
+                  <th className="p-4 font-bold">{t('harvest.col.zone')}</th>
+                  <th className="p-4 font-bold">{t('harvest.col.quantity')}</th>
+                  <th className="p-4 font-bold">{t('harvest.col.unit')}</th>
+                  <th className="p-4 font-bold">{t('harvest.col.grade')}</th>
+                  <th className="p-4 font-bold">{t('harvest.col.notes')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -144,7 +146,7 @@ export default function HarvestPage() {
       </div>
       <FormDialog
         open={formOpen}
-        title="Add Harvest Record"
+        title={t('harvest.dialog.title')}
         onClose={() => setFormOpen(false)}
       >
         <HarvestForm

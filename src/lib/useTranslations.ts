@@ -2,11 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  defaultLocale,
   mergeTranslations,
   type Locale,
 } from '@/lib/i18n'
 import { getI18nStrings } from '@/lib/api/supabaseClient'
+import { useLocale } from '@/context/LocaleContext'
 
 type I18nRow = {
   key: string
@@ -14,7 +14,9 @@ type I18nRow = {
   km: string | null
 }
 
-export function useTranslations(locale: Locale = defaultLocale) {
+export function useTranslations(localeOverride?: Locale) {
+  const { locale: contextLocale } = useLocale()
+  const locale = localeOverride ?? contextLocale
   const [overrides, setOverrides] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const cacheRef = useRef<Record<Locale, Record<string, string>>>({

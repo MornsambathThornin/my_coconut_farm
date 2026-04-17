@@ -3,31 +3,34 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '@/utils/supabase/client'
+import { useTranslations } from '@/lib/useTranslations'
+import LocaleSwitcher from '@/components/layout/LocaleSwitcher'
 // Optional: If you use Lucide icons (common in modern Next.js projects)
-import { 
-  LayoutDashboard, 
+import {
+  LayoutDashboard,
   Home,
-  Map, 
-  Grape, 
-  Droplets, 
-  BarChart3, 
-  UserCircle, 
-  LogOut 
+  Map,
+  Grape,
+  Droplets,
+  BarChart3,
+  UserCircle,
+  LogOut
 } from 'lucide-react'
 
 const menu = [
-  { name: 'Overview', path: '/dashboard', icon: LayoutDashboard },
-  { name: 'Farms', path: '/dashboard/farms', icon: Home },
-  { name: 'Zones', path: '/dashboard/zones', icon: Map },
-  { name: 'Harvest', path: '/dashboard/harvest', icon: Grape },
-  { name: 'Irrigation', path: '/dashboard/irrigation', icon: Droplets },
-  { name: 'Reports', path: '/dashboard/reports', icon: BarChart3 },
-  { name: 'Profile', path: '/dashboard/profile', icon: UserCircle },
+  { key: 'nav.overview', path: '/dashboard', icon: LayoutDashboard },
+  { key: 'nav.farms', path: '/dashboard/farms', icon: Home },
+  { key: 'nav.zones', path: '/dashboard/zones', icon: Map },
+  { key: 'nav.harvest', path: '/dashboard/harvest', icon: Grape },
+  { key: 'nav.irrigation', path: '/dashboard/irrigation', icon: Droplets },
+  { key: 'nav.reports', path: '/dashboard/reports', icon: BarChart3 },
+  { key: 'nav.profile', path: '/dashboard/profile', icon: UserCircle },
 ]
 
 export default function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
+  const { t } = useTranslations()
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut()
@@ -67,7 +70,7 @@ export default function Sidebar() {
               }`}
             >
               <Icon className={`w-5 h-5 ${active ? 'text-white' : 'text-slate-500 group-hover:text-green-400'}`} />
-              <span className="font-medium">{item.name}</span>
+              <span className="font-medium">{t(item.key)}</span>
               {active && (
                 <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
               )}
@@ -76,15 +79,18 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* Footer / Logout Section */}
-      <div className="p-4 mt-auto">
+      {/* Footer / Locale + Logout */}
+      <div className="p-4 mt-auto space-y-3">
+        <div className="flex justify-center">
+          <LocaleSwitcher />
+        </div>
         <div className="bg-slate-800/50 rounded-2xl p-4 border border-slate-700/50">
           <button
             onClick={handleLogout}
             className="flex items-center gap-3 w-full px-3 py-2 text-sm font-medium text-slate-400 hover:text-red-400 transition-colors"
           >
             <LogOut className="w-4 h-4" />
-            Logout Session
+            {t('nav.logout')}
           </button>
         </div>
       </div>
