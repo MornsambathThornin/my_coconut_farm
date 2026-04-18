@@ -66,6 +66,10 @@ export async function getHarvestsByZoneClient(zoneId: string) {
 }
 
 export async function getI18nStrings() {
-  const res = await browserSupabase.from('i18n_strings').select('*')
-  return handleError(res)
+  const res = await fetch('/api/i18n-strings')
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body?.error ?? 'Failed to load translations')
+  }
+  return res.json()
 }
