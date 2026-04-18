@@ -1,18 +1,16 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { createServerSupabase } from '@/lib/api/supabaseServer'
+import { requireUser } from '@/lib/api/auth'
 
 export async function GET(req: NextRequest) {
-  const sb = await createServerSupabase()
-  const { data: userData, error: authError } = await sb.auth.getUser()
-  if (authError || !userData.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const { sb, user, unauthorized } = await requireUser()
+  if (unauthorized) return unauthorized
 
   const farmId = req.nextUrl.searchParams.get('farm_id')
   let query = sb
     .from('zones')
     .select('*, crop_type:crop_types(id, name_en, name_km, category, default_unit)')
+    .eq('user_id', user.id)
     .order('name')
   if (farmId) {
     query = query.eq('farm_id', farmId)
@@ -27,6 +25,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const { sb, user, unauthorized } = await requireUser()
+  if (unauthorized) return unauthorized
+
   let body: unknown
   try {
     body = await req.json()
@@ -54,17 +55,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Zone boundary is required' }, { status: 400 })
   }
 
-  const sb = await createServerSupabase()
-  const { data: userData, error: authError } = await sb.auth.getUser()
-  if (authError || !userData.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { data: farm } = await sb
+    .from('farms')
+    .select('user_id')
+    .eq('id', farmId)
+    .maybeSingle()
+
+  if (!farm || farm.user_id !== user.id) {
+    return NextResponse.json({ error: 'Farm not found' }, { status: 404 })
   }
 
   try {
     const { data, error } = await sb
       .from('zones')
       .insert({
-        user_id: userData.user.id,
+        user_id: user.id,
         farm_id: farmId,
         name,
         area_ha: payload.area_ha != null ? Number(payload.area_ha) : null,

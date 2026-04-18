@@ -4,6 +4,18 @@ A running log of notable changes to the farm dashboard, focused on the migration
 
 ## [Unreleased]
 
+### Added
+- **Backend Phase 1 — schema & RLS foundation.** Introduce a tracked `supabase/migrations/` directory so schema changes are version-controlled instead of applied ad-hoc in the dashboard:
+  - `0001_init_schema.sql` — idempotent baseline declaring every table the app touches (profiles, farms, zones, harvests, harvest_quality_metrics, irrigation_logs, plantation_batches, crop_types, yield_forecasts, i18n_strings) plus `user_id` columns, foreign keys, and indexes. Safe to run against an existing database; uses `CREATE TABLE IF NOT EXISTS` / `ADD COLUMN IF NOT EXISTS` everywhere.
+  - `0002_rls_policies.sql` — enables row-level security on every user-owned table and installs owner-scoped SELECT/INSERT/UPDATE/DELETE policies. `harvest_quality_metrics` is gated through its parent `harvests.user_id`; `yield_forecasts` through its parent `zones.user_id`. `crop_types` and `i18n_strings` stay publicly readable. Re-runnable via drop-if-exists then create.
+  - `supabase/migrations/README.md` — how to apply (Supabase dashboard or CLI) and a smoke-test recipe for verifying RLS with two accounts.
+- **`requireUser()` auth helper** (`src/lib/api/auth.ts`). All API routes now gate access through one function that returns `{ sb, user, unauthorized }`. Removes ~12 copy-pasted auth blocks and guarantees auth-first ordering.
+
+### Fixed
+- **`/api/farms/[id]` PATCH and DELETE had no auth check** — any authenticated user could rename or delete any farm by guessing its ID. Both handlers now call `requireUser()` and verify `farms.user_id === user.id` before the update/delete. With RLS applied this is belt-and-braces, but the API should enforce ownership explicitly rather than relying solely on the database layer.
+- **`/api/zones` GET was not scoped to the caller** (it returned all rows the RLS-disabled database would hand over). It now filters by `.eq('user_id', user.id)`.
+- **`/api/zones` POST, `/api/harvests` POST, `/api/irrigation-logs` POST, `/api/plantation-batches` POST** now all verify the target zone/farm belongs to the caller before inserting, returning 404 otherwise. Previously they trusted the client-supplied `zone_id` / `farm_id`.
+
 ### Changed
 - **HarvestForm is now crop-agnostic** (`src/components/forms/HarvestForm.tsx`). The `unit` field no longer defaults to `'nuts'`. It auto-fills from the selected zone's `crop_type.default_unit` (e.g. `kg` for mango, `bunches` for banana, `nuts` for coconut) and the placeholder is generated dynamically. User-entered custom units are preserved when switching zones.
   - Zone query now joins `crop_type:crop_types(default_unit, name_en)` to fetch the default unit alongside the zone.

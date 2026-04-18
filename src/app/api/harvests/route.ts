@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { createServerSupabase } from '@/lib/api/supabaseServer'
+import { requireUser } from '@/lib/api/auth'
 
 type MetricPayload = {
   metric_name: string
@@ -14,16 +14,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'farm_id is required' }, { status: 400 })
   }
 
-  const sb = await createServerSupabase()
-  const { data: userData, error: authError } = await sb.auth.getUser()
-  if (authError || !userData.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const { sb, user, unauthorized } = await requireUser()
+  if (unauthorized) return unauthorized
 
   const { data, error } = await sb
     .from('harvests')
     .select('id, harvest_date, quantity, unit, quality_grade, notes, zone_id, zones(name)')
-    .eq('user_id', userData.user.id)
+    .eq('user_id', user.id)
     .eq('zones.farm_id', farmId)
     .order('harvest_date', { ascending: false })
 
@@ -70,11 +67,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Quantity must be positive' }, { status: 400 })
   }
 
-  const sb = await createServerSupabase()
-  const { data: userData, error: authError } = await sb.auth.getUser()
-  if (authError || !userData.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const { sb, user, unauthorized } = await requireUser()
+  if (unauthorized) return unauthorized
 
   const { data: zoneRecord } = await sb
     .from('zones')
@@ -82,7 +76,7 @@ export async function POST(req: NextRequest) {
     .eq('id', zoneId)
     .maybeSingle()
 
-  if (!zoneRecord || zoneRecord.user_id !== userData.user.id || zoneRecord.farm_id !== farmId) {
+  if (!zoneRecord || zoneRecord.user_id !== user.id || zoneRecord.farm_id !== farmId) {
     return NextResponse.json({ error: 'Zone is not available for this farm' }, { status: 404 })
   }
 
@@ -90,7 +84,7 @@ export async function POST(req: NextRequest) {
     const { data: harvest, error: insertError } = await sb
       .from('harvests')
       .insert({
-        user_id: userData.user.id,
+        user_id: user.id,
         zone_id: zoneId,
         harvest_date: harvestDate,
         quantity,

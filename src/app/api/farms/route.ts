@@ -1,13 +1,11 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { createFarmServer, createServerSupabase } from '@/lib/api/supabaseServer'
+import { createFarmServer } from '@/lib/api/supabaseServer'
+import { requireUser } from '@/lib/api/auth'
 
 export async function GET() {
-  const sb = await createServerSupabase()
-    const { data: userData, error: authError } = await sb.auth.getUser()
-    if (authError || !userData.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  const { sb, unauthorized } = await requireUser()
+  if (unauthorized) return unauthorized
 
   const { data, error } = await sb
     .from('farms')
@@ -22,11 +20,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const sb = await createServerSupabase()
-  const { data: userData, error: authError } = await sb.auth.getUser()
-  if (authError || !userData.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const { user, unauthorized } = await requireUser()
+  if (unauthorized) return unauthorized
 
   let body: unknown
   try {
@@ -67,7 +62,7 @@ export async function POST(req: NextRequest) {
         location: typeof payload.location === 'string' ? payload.location : null,
         total_area_ha: payload.total_area_ha != null ? Number(payload.total_area_ha) : null,
       },
-      userData.user.id
+      user.id
     )
 
     return NextResponse.json(created)

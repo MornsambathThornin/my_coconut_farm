@@ -1,12 +1,9 @@
 import { NextResponse } from 'next/server'
-import { createServerSupabase } from '@/lib/api/supabaseServer'
+import { requireUser } from '@/lib/api/auth'
 
 export async function GET() {
-  const sb = await createServerSupabase()
-  const { data: userData, error: authError } = await sb.auth.getUser()
-  if (authError || !userData.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const { sb, unauthorized } = await requireUser()
+  if (unauthorized) return unauthorized
 
   const { data, error } = await sb
     .from('crop_types')

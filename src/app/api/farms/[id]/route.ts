@@ -1,9 +1,14 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { updateFarmServer, deleteFarmServer } from '@/lib/api/supabaseServer'
+import { requireUser } from '@/lib/api/auth'
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { sb, user, unauthorized } = await requireUser()
+  if (unauthorized) return unauthorized
+
   const { id } = await params
+
   let body: unknown
   try {
     body = await req.json()
@@ -11,7 +16,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
 
-  // Basic validation
   if (!body || typeof body !== 'object') {
     return NextResponse.json({ error: 'Missing payload' }, { status: 400 })
   }
@@ -41,6 +45,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     payload.total_area_ha = area
   }
 
+  const { data: existing } = await sb
+    .from('farms')
+    .select('user_id')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (!existing || existing.user_id !== user.id) {
+    return NextResponse.json({ error: 'Farm not found' }, { status: 404 })
+  }
+
   try {
     const updated = await updateFarmServer(id, payload)
     return NextResponse.json(updated)
@@ -50,8 +64,22 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { sb, user, unauthorized } = await requireUser()
+  if (unauthorized) return unauthorized
+
   const { id } = await params
+
+  const { data: existing } = await sb
+    .from('farms')
+    .select('user_id')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (!existing || existing.user_id !== user.id) {
+    return NextResponse.json({ error: 'Farm not found' }, { status: 404 })
+  }
+
   try {
     const deleted = await deleteFarmServer(id)
     return NextResponse.json(deleted)

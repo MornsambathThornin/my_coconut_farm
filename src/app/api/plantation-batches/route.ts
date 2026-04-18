@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { createServerSupabase } from '@/lib/api/supabaseServer'
+import { requireUser } from '@/lib/api/auth'
 
 export async function POST(req: NextRequest) {
   let body: unknown
@@ -21,17 +21,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Zone is required' }, { status: 400 })
   }
 
-  const sb = await createServerSupabase()
-  const { data: userData, error: authError } = await sb.auth.getUser()
-  if (authError || !userData.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { sb, user, unauthorized } = await requireUser()
+  if (unauthorized) return unauthorized
+
+  const { data: zoneRecord } = await sb
+    .from('zones')
+    .select('user_id')
+    .eq('id', zoneId)
+    .maybeSingle()
+
+  if (!zoneRecord || zoneRecord.user_id !== user.id) {
+    return NextResponse.json({ error: 'Zone not found' }, { status: 404 })
   }
 
   try {
     const { data, error } = await sb
       .from('plantation_batches')
       .insert({
-        user_id: userData.user.id,
+        user_id: user.id,
         zone_id: zoneId,
         planting_year: payload.planting_year != null ? Number(payload.planting_year) : null,
         variety: typeof payload.variety === 'string' ? payload.variety : null,

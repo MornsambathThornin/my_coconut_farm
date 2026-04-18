@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { createServerSupabase } from '@/lib/api/supabaseServer'
+import { requireUser } from '@/lib/api/auth'
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { sb, user, unauthorized } = await requireUser()
+  if (unauthorized) return unauthorized
+
   const { id } = await params
+
   let body: unknown
   try {
     body = await req.json()
@@ -28,12 +32,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: 'Zone boundary is required' }, { status: 400 })
   }
 
-  const sb = await createServerSupabase()
-  const { data: userData, error: authError } = await sb.auth.getUser()
-  if (authError || !userData.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
   try {
     const { data, error } = await sb
       .from('zones')
@@ -44,7 +42,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         avg_tree_age_years: payload.avg_tree_age_years != null ? Number(payload.avg_tree_age_years) : null,
       })
       .eq('id', id)
-      .eq('user_id', userData.user.id)
+      .eq('user_id', user.id)
       .select()
       .single()
 
@@ -60,19 +58,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { sb, user, unauthorized } = await requireUser()
+  if (unauthorized) return unauthorized
+
   const { id } = await params
-  const sb = await createServerSupabase()
-  const { data: userData, error: authError } = await sb.auth.getUser()
-  if (authError || !userData.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
 
   try {
     const { data, error } = await sb
       .from('zones')
       .delete()
       .eq('id', id)
-      .eq('user_id', userData.user.id)
+      .eq('user_id', user.id)
       .select()
       .single()
 

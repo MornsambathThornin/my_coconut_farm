@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { createServerSupabase } from '@/lib/api/supabaseServer'
+import { requireUser } from '@/lib/api/auth'
 
 export async function GET(req: NextRequest) {
   const farmId = req.nextUrl.searchParams.get('farm_id')
@@ -8,16 +8,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'farm_id is required' }, { status: 400 })
   }
 
-  const sb = await createServerSupabase()
-  const { data: userData, error: authError } = await sb.auth.getUser()
-  if (authError || !userData.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const { sb, user, unauthorized } = await requireUser()
+  if (unauthorized) return unauthorized
 
   const { data, error } = await sb
     .from('irrigation_logs')
     .select('id, irrigation_date, method, duration_minutes, water_source, notes, zone_id, zones(name)')
-    .eq('user_id', userData.user.id)
+    .eq('user_id', user.id)
     .eq('zones.farm_id', farmId)
     .order('irrigation_date', { ascending: false })
 
@@ -56,17 +53,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Irrigation date is required' }, { status: 400 })
   }
 
-  const sb = await createServerSupabase()
-  const { data: userData, error: authError } = await sb.auth.getUser()
-  if (authError || !userData.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { sb, user, unauthorized } = await requireUser()
+  if (unauthorized) return unauthorized
+
+  const { data: zoneRecord } = await sb
+    .from('zones')
+    .select('farm_id, user_id')
+    .eq('id', zoneId)
+    .maybeSingle()
+
+  if (!zoneRecord || zoneRecord.user_id !== user.id || zoneRecord.farm_id !== farmId) {
+    return NextResponse.json({ error: 'Zone is not available for this farm' }, { status: 404 })
   }
 
   try {
     const { data, error } = await sb
       .from('irrigation_logs')
       .insert({
-        user_id: userData.user.id,
+        user_id: user.id,
         zone_id: zoneId,
         irrigation_date: irrigationDate,
         method: typeof payload.method === 'string' ? payload.method : null,
