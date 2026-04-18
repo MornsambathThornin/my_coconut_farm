@@ -90,6 +90,8 @@ export default function ZoneDetailPage() {
     message: "",
   });
   const [batchFormOpen, setBatchFormOpen] = useState(false);
+  const [batchEditingId, setBatchEditingId] = useState<string | null>(null);
+  const [batchDeleteId, setBatchDeleteId] = useState<string | null>(null);
   const [harvestFormOpen, setHarvestFormOpen] = useState(false);
   const [irrigationFormOpen, setIrrigationFormOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -169,11 +171,13 @@ export default function ZoneDetailPage() {
           const payload = await res.json()
           return { data: (payload || []) as CropType[] }
         }),
-        supabase
-          .from("yield_forecasts")
-          .select("forecast_month, expected_yield_kg_per_ha, confidence_score")
-          .eq("zone_id", id)
-          .order("forecast_month", { ascending: true }),
+        fetch(`/api/yield-forecasts?zone_id=${encodeURIComponent(id)}`).then(
+          async (res) => {
+            if (!res.ok) return { data: [] as ForecastRow[] }
+            const payload = await res.json()
+            return { data: (payload || []) as ForecastRow[] }
+          }
+        ),
       ]);
 
       setZone(zoneData);
@@ -191,7 +195,7 @@ export default function ZoneDetailPage() {
           ) || [];
       setOccupiedBoundaries(boundaries);
       setCropTypes((c as { data?: CropType[] }).data || []);
-      setForecasts(fc.data || []);
+      setForecasts((fc as { data?: ForecastRow[] }).data || []);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Unable to load zone data."
@@ -275,24 +279,37 @@ export default function ZoneDetailPage() {
   const handleBatchConfirm = async () => {
     setBatchConfirmOpen(false);
     setBatchSaving(true);
-    const res = await fetch('/api/plantation-batches', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        zone_id: id,
-        planting_year: batchForm.planting_year ? Number(batchForm.planting_year) : null,
-        variety: batchForm.variety || null,
-        tree_count: batchForm.tree_count ? Number(batchForm.tree_count) : null,
-        notes: batchForm.notes || null,
-      })
-    })
+
+    const body = {
+      zone_id: id,
+      planting_year: batchForm.planting_year ? Number(batchForm.planting_year) : null,
+      variety: batchForm.variety || null,
+      tree_count: batchForm.tree_count ? Number(batchForm.tree_count) : null,
+      notes: batchForm.notes || null,
+    };
+
+    const res = batchEditingId
+      ? await fetch(`/api/plantation-batches/${batchEditingId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        })
+      : await fetch('/api/plantation-batches', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+
     const payload = await res.json()
     if (res.ok) {
       setBatchToast({
         open: true,
-        message: "Planting batch saved."
+        message: batchEditingId
+          ? t('zoneDetail.batchUpdatedToast')
+          : 'Planting batch saved.',
       });
       setBatchForm({ planting_year: "", variety: "", tree_count: "", notes: "" });
+      setBatchEditingId(null);
       fetchData();
       setBatchFormOpen(false);
     } else {
@@ -302,6 +319,34 @@ export default function ZoneDetailPage() {
       });
     }
     setBatchSaving(false);
+  };
+
+  const openBatchEdit = (batch: PlantationBatch) => {
+    setBatchForm({
+      planting_year: batch.planting_year != null ? String(batch.planting_year) : '',
+      variety: batch.variety ?? '',
+      tree_count: batch.tree_count != null ? String(batch.tree_count) : '',
+      notes: batch.notes ?? '',
+    });
+    setBatchEditingId(batch.id);
+    setBatchFormOpen(true);
+  };
+
+  const handleBatchDeleteConfirm = async () => {
+    if (!batchDeleteId) return;
+    const deleteId = batchDeleteId;
+    setBatchDeleteId(null);
+    const res = await fetch(`/api/plantation-batches/${deleteId}`, { method: 'DELETE' });
+    const payload = await res.json().catch(() => ({}));
+    if (res.ok) {
+      setBatchToast({ open: true, message: t('zoneDetail.batchDeletedToast') });
+      fetchData();
+    } else {
+      setBatchError({
+        open: true,
+        message: payload?.error || 'Unable to delete planting batch',
+      });
+    }
   };
 
   const handleEditChange = (
@@ -746,7 +791,7 @@ export default function ZoneDetailPage() {
                <div className="overflow-x-auto">
                  <table className="w-full text-sm text-left">
                    <thead className="bg-slate-50/50">
-                     <tr><th className="p-4 font-bold">{t("zoneDetail.col.year")}</th><th className="p-4 font-bold">{t("zoneDetail.col.variety")}</th><th className="p-4 font-bold">{t("zoneDetail.col.trees")}</th><th className="p-4 font-bold">{t("zoneDetail.col.notes")}</th></tr>
+                     <tr><th className="p-4 font-bold">{t("zoneDetail.col.year")}</th><th className="p-4 font-bold">{t("zoneDetail.col.variety")}</th><th className="p-4 font-bold">{t("zoneDetail.col.trees")}</th><th className="p-4 font-bold">{t("zoneDetail.col.notes")}</th><th className="p-4 font-bold text-right"></th></tr>
                    </thead>
                    <tbody className="divide-y divide-slate-100">
                      {batches.map(b => (
@@ -755,6 +800,22 @@ export default function ZoneDetailPage() {
                          <td className="p-4"><span className="font-semibold text-green-700">{b.variety || "-"}</span></td>
                          <td className="p-4 font-bold">{b.tree_count}</td>
                          <td className="p-4 text-xs text-slate-400 max-w-[120px] truncate">{b.notes || "-"}</td>
+                         <td className="p-4 text-right whitespace-nowrap">
+                           <button
+                             type="button"
+                             onClick={() => openBatchEdit(b)}
+                             className="text-xs font-semibold text-slate-600 hover:text-slate-900 px-2"
+                           >
+                             {t('zoneDetail.batchEdit')}
+                           </button>
+                           <button
+                             type="button"
+                             onClick={() => setBatchDeleteId(b.id)}
+                             className="text-xs font-semibold text-red-600 hover:text-red-800 px-2"
+                           >
+                             {t('zoneDetail.batchDelete')}
+                           </button>
+                         </td>
                        </tr>
                      ))}
                    </tbody>
@@ -763,8 +824,12 @@ export default function ZoneDetailPage() {
             </div>
             <FormDialog
               open={batchFormOpen}
-              title={t("zone.batch-action")}
-              onClose={() => setBatchFormOpen(false)}
+              title={batchEditingId ? t('zoneDetail.batchEditTitle') : t('zone.batch-action')}
+              onClose={() => {
+                setBatchFormOpen(false);
+                setBatchEditingId(null);
+                setBatchForm({ planting_year: "", variety: "", tree_count: "", notes: "" });
+              }}
             >
               <form onSubmit={handleBatchSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -774,7 +839,11 @@ export default function ZoneDetailPage() {
                 <input name="variety" value={batchForm.variety} onChange={handleBatchChange} placeholder={t("zoneDetail.batchPlaceholder.variety")} className="w-full border-slate-200 p-3 rounded-xl focus:ring-green-500 focus:border-green-500 transition-all text-sm" />
                 <textarea name="notes" value={batchForm.notes} onChange={handleBatchChange} placeholder={t("zoneDetail.batchPlaceholder.observations")} rows={3} className="w-full border-slate-200 p-3 rounded-xl focus:ring-green-500 focus:border-green-500 transition-all text-sm" />
                 <button type="submit" disabled={batchSaving} className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-slate-800 transition-all shadow-lg disabled:opacity-50">
-                  {batchSaving ? t("zoneDetail.batchSubmitting") : t("zoneDetail.batchSubmit")}
+                  {batchSaving
+                    ? t("zoneDetail.batchSubmitting")
+                    : batchEditingId
+                    ? t('zoneDetail.batchEditSubmit')
+                    : t("zoneDetail.batchSubmit")}
                 </button>
               </form>
             </FormDialog>
@@ -785,6 +854,14 @@ export default function ZoneDetailPage() {
               confirmLabel={t("common.save")}
               onCancel={() => setBatchConfirmOpen(false)}
               onConfirm={handleBatchConfirm}
+            />
+            <ConfirmModal
+              open={batchDeleteId !== null}
+              title={t('zoneDetail.batchDeleteTitle')}
+              message={t('zoneDetail.batchDeleteMsg')}
+              confirmLabel={t('zoneDetail.batchDelete')}
+              onCancel={() => setBatchDeleteId(null)}
+              onConfirm={handleBatchDeleteConfirm}
             />
             <ErrorModal
               open={batchError.open}
