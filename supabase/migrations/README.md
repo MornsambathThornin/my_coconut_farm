@@ -5,8 +5,11 @@ management dashboard. Files are applied in lexicographic order.
 
 | File | Purpose |
 |------|---------|
-| `0001_init_schema.sql` | Every table, column, foreign key, and index the app needs. Fully idempotent — safe against an existing database. |
-| `0002_rls_policies.sql` | Enables row-level security on every user-owned table and installs owner-scoped SELECT/INSERT/UPDATE/DELETE policies. |
+| `20260418000001_init_schema.sql` | Every table, column, foreign key, and index the app needs. Fully idempotent — safe against an existing database. |
+| `20260418000002_rls_policies.sql` | Enables row-level security on every user-owned table and installs owner-scoped SELECT/INSERT/UPDATE/DELETE policies. |
+
+Filenames use the Supabase CLI's required `YYYYMMDDHHMMSS_name.sql` format so
+`supabase db push` picks them up.
 
 ## How to apply
 
@@ -14,8 +17,8 @@ management dashboard. Files are applied in lexicographic order.
 
 1. Open the project in the Supabase dashboard.
 2. Go to **SQL editor** → **New query**.
-3. Paste the contents of `0001_init_schema.sql`, run.
-4. Repeat with `0002_rls_policies.sql`.
+3. Paste the contents of `20260418000001_init_schema.sql`, run.
+4. Repeat with `20260418000002_rls_policies.sql`.
 
 Both files are re-runnable; you can apply them again if schema drifts.
 
